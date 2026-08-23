@@ -1,0 +1,660 @@
+-------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/sbb151/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUn
+> iversity/ACCTG 597A/acctg597a-research-design/week01-reverse-regression/rever
+> se_regression.log
+  log type:  text
+ opened on:  23 Aug 2026, 16:03:20
+
+. 
+. *****************************************************************************
+> ***
+. * MODULE 1: The reverse regression recovers gamma only when R^2 = 1
+. *
+. * True model:  G = gamma*g + u,  gamma = 0.31 (BLR's own forward estimate).
+. * We vary var(u) to trace out R^2 from 0.05 to 0.99 and record:
+. *   - the forward estimate  gamma-hat        (unbiased at every R^2)
+. *   - the reverse estimate  delta-hat
+. *   - the implied forward coefficient 1/delta-hat
+. * BLR's Property (3), gamma*delta = R^2, implies 1/delta = gamma/R^2:
+. * the implied coefficient is inflated by exactly 1/R^2.
+. *****************************************************************************
+> ***
+. 
+. local gamma  = 0.31
+
+. local nobs   = 200000
+
+. 
+. tempname mem1
+
+. postfile `mem1' r2_target r2_hat gamma_fwd delta_rev implied theory ///
+>     using module1_results, replace
+
+. 
+. foreach r2 in 0.05 0.08 0.10 0.13 0.15 0.20 0.25 0.30 0.40 0.50 0.60 0.70 0.8
+> 0 0.90 0.95 0.99 {
+  2.     quietly {
+  3.         clear
+  4.         set obs `nobs'
+  5.         * var(g) = 1.  R^2 = gamma^2 / (gamma^2 + var(u))  =>  solve for v
+> ar(u)
+.         local varu = (`gamma'^2) * (1 - `r2') / `r2'
+  6.         gen g = rnormal(0, 1)
+  7.         gen G = `gamma'*g + rnormal(0, sqrt(`varu'))
+  8. 
+.         reg G g
+  9.         local gf  = _b[g]
+ 10.         local r2h = e(r2)
+ 11.         reg g G
+ 12.         local d   = _b[G]
+ 13. 
+.         post `mem1' (`r2') (`r2h') (`gf') (`d') (1/`d') (`gamma'/`r2')
+ 14.     }
+ 15. }
+
+. postclose `mem1'
+
+. 
+. use module1_results, clear
+
+. format gamma_fwd delta_rev implied theory %9.3f
+
+. 
+. di _n "MODULE 1: forward vs. implied-from-reverse estimates of gamma = `gamma
+> '"
+
+MODULE 1: forward vs. implied-from-reverse estimates of gamma = .31
+
+. list r2_target gamma_fwd delta_rev implied theory, noobs sep(0)
+
+  +---------------------------------------------------+
+  | r2_tar~t   gamma_~d   delta_~v   implied   theory |
+  |---------------------------------------------------|
+  |      .05      0.313      0.163     6.135    6.200 |
+  |      .08      0.313      0.261     3.837    3.875 |
+  |       .1      0.311      0.324     3.086    3.100 |
+  |      .13      0.309      0.417     2.396    2.385 |
+  |      .15      0.309      0.482     2.076    2.067 |
+  |       .2      0.309      0.641     1.559    1.550 |
+  |      .25      0.308      0.799     1.251    1.240 |
+  |       .3      0.310      0.968     1.033    1.033 |
+  |       .4      0.311      1.296     0.771    0.775 |
+  |       .5      0.310      1.620     0.617    0.620 |
+  |       .6      0.310      1.934     0.517    0.517 |
+  |       .7      0.310      2.260     0.442    0.443 |
+  |       .8      0.310      2.577     0.388    0.387 |
+  |       .9      0.310      2.904     0.344    0.344 |
+  |      .95      0.310      3.065     0.326    0.326 |
+  |      .99      0.310      3.193     0.313    0.313 |
+  +---------------------------------------------------+
+
+. 
+. * Figure 1: the implied coefficient explodes as R^2 falls
+. twoway (line theory r2_target, lcolor(gs10) lwidth(thick))                   
+> ///
+>        (scatter implied r2_target, mcolor(maroon) msymbol(O))                
+> ///
+>        (scatter gamma_fwd r2_target, mcolor(navy) msymbol(D)),               
+> ///
+>     yline(0.31, lpattern(dash) lcolor(navy))                                 
+> ///
+>     xline(0.13, lpattern(dot) lcolor(maroon))                                
+> ///
+>     text(2.7 0.16 "BLR's world: R{sup:2} = 0.13,", place(e) size(small))     
+>  ///
+>     text(2.45 0.16 "implied coefficient = 0.31/0.13 = 2.38", place(e) size(sm
+> all)) ///
+>     ytitle("Estimate of {&gamma}")                                           
+> ///
+>     xtitle("R{sup:2} of the return-earnings relation")                       
+> ///
+>     title("The reverse regression is unbiased only when R{sup:2} = 1")       
+> ///
+>     subtitle("True {&gamma} = 0.31; implied coefficient 1/{&delta} = {&gamma}
+> /R{sup:2}") ///
+>     legend(order(2 "Implied from reverse regression (1/{&delta})"            
+> ///
+>                  3 "Forward OLS ({&gamma}-hat)"                              
+> ///
+>                  1 "Theory: {&gamma}/R{sup:2}") ring(0) pos(1) cols(1))      
+> ///
+>     scheme(s1color)
+
+. graph export figures/fig1_implied_vs_r2.png, replace width(2000)
+file figures/fig1_implied_vs_r2.png written in PNG format
+
+. 
+. *****************************************************************************
+> ***
+. * MODULE 2: Two worlds, one regression -- delta is not identified
+. *
+. * World A (BLR taken literally): observed earnings changes contain a large
+. *   transitory component; prices respond only to the permanent part.
+. *       g = perm + trans,   G = perm + noise(small)
+. * World B (no transitory earnings at all): earnings are what they are --
+. *   the market reacts to all of g with ERC gamma0 -- but returns also carry
+. *   abundant NON-earnings information (discount rates, growth options, other
+. *   news). "Measurement error" exists only in the researcher's latent
+. *   construct (economic income), not in observed earnings.
+. *       g = perm,           G = gamma0*perm + noise(large)
+. *
+. * Both worlds are calibrated to BLR's moments: gamma-hat = 0.31, R^2 = 0.13.
+. * The forward, reverse, and grouped regressions are IDENTICAL across worlds.
+. * BLR interpret delta-hat as 1/(1-theta), the transitory-earnings parameter.
+. * World B has theta = 0 by construction and produces the same delta-hat.
+. *****************************************************************************
+> ***
+. 
+. * ---- World A: transitory earnings, clean returns --------------------------
+. * g = perm + trans with var(perm) = 0.31, var(trans) = 0.69 (so var(g) = 1),
+. * G = perm + e_A. Then cov(G,g) = var(perm) = 0.31 = gamma-hat. Choose
+. * var(e_A) so that R^2 = cov^2/(var(g)*var(G)) = 0.13 => var(G) = 0.739.
+. quietly {
+
+. di _n "MODULE 2, World A: transitory earnings (theta > 0), little other news"
+
+MODULE 2, World A: transitory earnings (theta > 0), little other news
+
+. reg G g
+
+      Source |       SS           df       MS      Number of obs   =   200,000
+-------------+----------------------------------   F(1, 199998)    =  29804.31
+       Model |  19108.6946         1  19108.6946   Prob > F        =    0.0000
+    Residual |   128226.44   199,998  .641138612   R-squared       =    0.1297
+-------------+----------------------------------   Adj R-squared   =    0.1297
+       Total |  147335.135   199,999  .736679357   Root MSE        =    .80071
+
+------------------------------------------------------------------------------
+           G | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           g |   .3088559    .001789   172.64   0.000     .3053494    .3123623
+       _cons |   .0011602   .0017904     0.65   0.517    -.0023491    .0046694
+------------------------------------------------------------------------------
+
+. local gfA = _b[g]
+
+. local r2A = e(r2)
+
+. reg g G
+
+      Source |       SS           df       MS      Number of obs   =   200,000
+-------------+----------------------------------   F(1, 199998)    =  29804.31
+       Model |  25980.2896         1  25980.2896   Prob > F        =    0.0000
+    Residual |  174337.396   199,998  .871695696   R-squared       =    0.1297
+-------------+----------------------------------   Adj R-squared   =    0.1297
+       Total |  200317.685   199,999  1.00159343   Root MSE        =    .93365
+
+------------------------------------------------------------------------------
+           g | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           G |   .4199222   .0024324   172.64   0.000     .4151548    .4246896
+       _cons |  -.0006052   .0020877    -0.29   0.772    -.0046971    .0034866
+------------------------------------------------------------------------------
+
+. local dA  = _b[G]
+
+. 
+. * ---- World B: NO transitory earnings, noisy returns -----------------------
+. * g = perm (all of it priced, theta = 0), G = 0.31*g + e_B with var(e_B)
+. * chosen so R^2 = 0.13: var(e_B) = gamma^2*(1-R^2)/R^2 = 0.643.
+. quietly {
+
+. di _n "MODULE 2, World B: zero transitory earnings (theta = 0), abundant non-
+> earnings news"
+
+MODULE 2, World B: zero transitory earnings (theta = 0), abundant non-earnings 
+> news
+
+. reg G g
+
+      Source |       SS           df       MS      Number of obs   =   200,000
+-------------+----------------------------------   F(1, 199998)    =  29431.67
+       Model |   18936.699         1   18936.699   Prob > F        =    0.0000
+    Residual |  128681.191   199,998  .643412388   R-squared       =    0.1283
+-------------+----------------------------------   Adj R-squared   =    0.1283
+       Total |   147617.89   199,999   .73809314   Root MSE        =    .80213
+
+------------------------------------------------------------------------------
+           G | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           g |    .308457    .001798   171.56   0.000      .304933     .311981
+       _cons |  -.0022288   .0017936    -1.24   0.214    -.0057443    .0012866
+------------------------------------------------------------------------------
+
+. local gfB = _b[g]
+
+. local r2B = e(r2)
+
+. reg g G
+
+      Source |       SS           df       MS      Number of obs   =   200,000
+-------------+----------------------------------   F(1, 199998)    =  29431.67
+       Model |  25531.7344         1  25531.7344   Prob > F        =    0.0000
+    Residual |  173496.658   199,998  .867491963   R-squared       =    0.1283
+-------------+----------------------------------   Adj R-squared   =    0.1283
+       Total |  199028.392   199,999  .995146937   Root MSE        =    .93139
+
+------------------------------------------------------------------------------
+           g | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           G |   .4158825   .0024242   171.56   0.000     .4111312    .4206338
+       _cons |  -.0005311   .0020827    -0.26   0.799    -.0046131    .0035508
+------------------------------------------------------------------------------
+
+. local dB  = _b[G]
+
+. 
+. di _n "MODULE 2 summary: the same regressions in two different economies"
+
+MODULE 2 summary: the same regressions in two different economies
+
+. di    "                       World A (theta>0)   World B (theta=0)"
+                       World A (theta>0)   World B (theta=0)
+
+. di    "forward gamma-hat:        " %6.3f `gfA' "             " %6.3f `gfB'
+forward gamma-hat:         0.309              0.308
+
+. di    "R-squared:                " %6.3f `r2A' "             " %6.3f `r2B'
+R-squared:                 0.130              0.128
+
+. di    "reverse delta-hat:        " %6.3f `dA'  "             " %6.3f `dB'
+reverse delta-hat:         0.420              0.416
+
+. di    "BLR-implied theta:        " %6.3f 1-1/`dA' "             " %6.3f 1-1/`
+> dB'
+BLR-implied theta:        -1.381             -1.405
+
+. di _n "delta-hat cannot distinguish transitory earnings from non-earnings"
+
+delta-hat cannot distinguish transitory earnings from non-earnings
+
+. di    "return variation: it is not identified as a structural parameter."
+return variation: it is not identified as a structural parameter.
+
+. 
+. *****************************************************************************
+> ***
+. * MODULE 3: Grouping by the dependent variable is mechanical inflation
+. *
+. * Use World B: G = 0.31*g + u with NO measurement error in g anywhere.
+. * Group observations into portfolios by G (the dependent variable), take
+. * within-portfolio MEDIANS (the BLM/BLR convention), and rerun the forward
+. * regression at each grouping level: 100, 50, 25, 10, 5 portfolios.
+. * BLR's own appendix result: gamma-hat_p -> gamma/R^2 = 0.31/0.13 = 2.38.
+. * Their Table 1 reports exactly this escalation (0.31 -> 2.30) and BLM read
+. * it as evidence about measurement error. Here there is NO measurement
+. * error -- the escalation is pure statistical mechanics: portfolios with
+. * high G are portfolios whose disturbances u happened to be high, so
+. * grouping on G sorts on the error term itself.
+. * Contrast: grouping by g (the regressor) leaves the slope untouched.
+. *****************************************************************************
+> ***
+. 
+. * Mimic BLR's actual design: 19 annual cross-sections of ~700 firms each
+. * (their annual N ranges 439-771); run the grouped regression year by year
+. * and average the slopes across years, exactly as BLM/BLR do. With ~700
+. * firms, coarse portfolios (140 obs each) diversify the disturbance almost
+. * fully -- the slope approaches gamma/R^2 -- while fine portfolios (7 obs
+. * each) diversify it only partially, which is what generates BLR's
+. * signature escalation pattern across grouping levels.
+. local nyears = 19
+
+. local ncs3   = 700
+
+. 
+. tempname mem3
+
+. postfile `mem3' year nports str12 groupvar slope r2 using module3_results, re
+> place
+
+. 
+. forvalues y = 1/`nyears' {
+  2.     quietly {
+  3.         clear
+  4.         set obs `ncs3'
+  5.         gen g = rnormal(0, 1)
+  6.         gen G = 0.31*g + rnormal(0, sqrt(0.643))
+  7.         save module3_year, replace
+  8. 
+.         reg G g
+  9.     }
+ 10.     post `mem3' (`y') (`ncs3') ("none") (_b[g]) (e(r2))
+ 11. 
+.     foreach gvar in G g {
+ 12.         foreach p in 100 50 25 10 5 {
+ 13.             quietly {
+ 14.                 use module3_year, clear
+ 15.                 xtile port = `gvar', nq(`p')
+ 16.                 collapse (median) G g, by(port)
+ 17.                 reg G g
+ 18.             }
+ 19.             post `mem3' (`y') (`p') ("`gvar'") (_b[g]) (e(r2))
+ 20.         }
+ 21.     }
+ 22. }
+
+. postclose `mem3'
+
+. 
+. use module3_results, clear
+
+. collapse (mean) slope r2, by(groupvar nports)
+
+. gsort groupvar -nports
+
+. format slope r2 %9.3f
+
+. di _n "MODULE 3: mean forward slope across `nyears' simulated years of N = `n
+> cs3'"
+
+MODULE 3: mean forward slope across 19 simulated years of N = 700
+
+. di    "          (true gamma = 0.31 in every year; NO measurement error anywh
+> ere)"
+          (true gamma = 0.31 in every year; NO measurement error anywhere)
+
+. di    "          BLR Table 1, grouped by G: 0.31 -> 1.13 -> 1.58 -> 1.83 -> 2
+> .07 -> 2.30"
+          BLR Table 1, grouped by G: 0.31 -> 1.13 -> 1.58 -> 1.83 -> 2.07 -> 2.
+> 30
+
+. list groupvar nports slope r2, noobs sepby(groupvar)
+
+  +-----------------------------------+
+  | groupvar   nports   slope      r2 |
+  |-----------------------------------|
+  |        G      100   0.996   0.416 |
+  |        G       50   1.405   0.594 |
+  |        G       25   1.751   0.745 |
+  |        G       10   2.074   0.888 |
+  |        G        5   2.152   0.948 |
+  |-----------------------------------|
+  |        g      100   0.318   0.429 |
+  |        g       50   0.321   0.599 |
+  |        g       25   0.324   0.757 |
+  |        g       10   0.329   0.893 |
+  |        g        5   0.346   0.959 |
+  |-----------------------------------|
+  |     none      700   0.315   0.132 |
+  +-----------------------------------+
+
+. save module3_results, replace
+file module3_results.dta saved
+
+. 
+. * Figure 2: the escalation replicated without any measurement error,
+. * with BLR's actual Table 1 estimates overlaid for comparison
+. preserve
+
+. keep if groupvar != "none"
+(1 observation deleted)
+
+. gen x = .
+(10 missing values generated)
+
+. replace x = 1 if nports == 100
+(2 real changes made)
+
+. replace x = 2 if nports == 50
+(2 real changes made)
+
+. replace x = 3 if nports == 25
+(2 real changes made)
+
+. replace x = 4 if nports == 10
+(2 real changes made)
+
+. replace x = 5 if nports == 5
+(2 real changes made)
+
+. * BLR (1987), Table 1, grouped by G: reported mean coefficients
+. gen blr = .
+(10 missing values generated)
+
+. replace blr = 1.13 if x == 1 & groupvar == "G"
+(1 real change made)
+
+. replace blr = 1.58 if x == 2 & groupvar == "G"
+(1 real change made)
+
+. replace blr = 1.83 if x == 3 & groupvar == "G"
+(1 real change made)
+
+. replace blr = 2.07 if x == 4 & groupvar == "G"
+(1 real change made)
+
+. replace blr = 2.30 if x == 5 & groupvar == "G"
+(1 real change made)
+
+. twoway (connected slope x if groupvar == "G", mcolor(maroon) lcolor(maroon)) 
+>  ///
+>        (connected blr x if groupvar == "G",                                  
+>  ///
+>             mcolor(maroon) msymbol(Th) lcolor(maroon) lpattern(shortdash))   
+>  ///
+>        (connected slope x if groupvar == "g", mcolor(navy) lcolor(navy)),    
+>  ///
+>     yline(0.31, lpattern(dash) lcolor(navy))                                 
+>  ///
+>     yline(2.38, lpattern(dash) lcolor(maroon))                               
+>  ///
+>     text(0.45 4.4 "true {&gamma} = 0.31", color(navy) size(small))           
+>  ///
+>     text(2.47 4.2 "asymptote {&gamma}/R{sup:2} = 2.38", color(maroon) size(sm
+> all)) ///
+>     xlabel(1 "100" 2 "50" 3 "25" 4 "10" 5 "5")                               
+>  ///
+>     xtitle("Number of portfolios (coarser grouping {&rarr})")                
+>  ///
+>     ytitle("Mean grouped-regression slope")                                  
+>  ///
+>     title("Grouping by the dependent variable inflates the slope")           
+>  ///
+>     subtitle("Simulation has zero measurement error, yet reproduces BLR's esc
+> alation") ///
+>     legend(order(1 "Simulated: grouped by G (dependent variable)"            
+>  ///
+>                  2 "BLR Table 1, actual: grouped by G"                       
+>  ///
+>                  3 "Simulated: grouped by g (regressor)")                    
+>  ///
+>            ring(0) pos(11) cols(1) size(small))                              
+>  ///
+>     scheme(s1color)
+
+. graph export figures/fig2_grouping_escalation.png, replace width(2000)
+file figures/fig2_grouping_escalation.png written in PNG format
+
+. restore
+
+. 
+. *****************************************************************************
+> ***
+. * MODULE 4: The Basu (1997) legacy -- spurious asymmetric timeliness
+. *
+. * Basu's conservatism regression is a piecewise REVERSE regression:
+. *     g = b0 + b1*D + b2*G + b3*(D*G) + e,   D = 1(G < 0),
+. * and b3 > 0 is read as conservatism (earnings timelier for bad news).
+. *
+. * Simulate a world with ZERO conservatism: earnings respond to news
+. * symmetrically. But let the non-earnings component of returns be
+. * right-skewed (limited liability; growth-option and discount-rate news
+. * produce occasional large positive returns unrelated to current earnings).
+. * Then negative returns are disproportionately NEWS-driven while large
+. * positive returns are disproportionately NOISE-driven, so the reverse
+. * slope cov(g,G)/var(G) is steeper on the negative side: b3 > 0 with no
+. * conservatism whatsoever. The Basu coefficient inherits every pathology
+. * of the reverse regression: it is a statement about the variance
+. * composition of returns, not about accounting.
+. *
+. * Placebo: with SYMMETRIC non-earnings noise, b3 = 0 -- confirming the
+. * skewness of return noise, not accounting behavior, drives the result.
+. *****************************************************************************
+> ***
+. 
+. * Monte Carlo at a realistic cross-section size (BLR's annual N ~ 700)
+. local reps  = 1000
+
+. local ncs   = 700
+
+. 
+. tempname mem4
+
+. postfile `mem4' rep b3_skew t3_skew b3_symm t3_symm using module4_results, re
+> place
+
+. 
+. forvalues r = 1/`reps' {
+  2.     quietly {
+  3.         clear
+  4.         set obs `ncs'
+  5.         gen news = rnormal(0, 1)
+  6.         * earnings: symmetric response to news + idiosyncratic noise
+.         gen g = 0.31*news + rnormal(0, 0.5)
+  7. 
+.         * returns, version 1: right-skewed non-earnings noise
+.         * (standardized chi-square(2): mean 0, variance 1, skewness 2)
+.         gen zskew = (rchi2(2) - 2)/2
+  8.         gen G1 = news + 1.4*zskew
+  9. 
+.         * returns, version 2: symmetric non-earnings noise, same variance
+.         gen G2 = news + 1.4*rnormal(0, 1)
+ 10. 
+.         * Basu regression on each
+.         gen D1  = (G1 < 0)
+ 11.         gen DG1 = D1*G1
+ 12.         reg g D1 G1 DG1
+ 13.         local b3s = _b[DG1]
+ 14.         local t3s = _b[DG1]/_se[DG1]
+ 15. 
+.         gen D2  = (G2 < 0)
+ 16.         gen DG2 = D2*G2
+ 17.         reg g D2 G2 DG2
+ 18.         local b3n = _b[DG2]
+ 19.         local t3n = _b[DG2]/_se[DG2]
+ 20. 
+.         post `mem4' (`r') (`b3s') (`t3s') (`b3n') (`t3n')
+ 21.     }
+ 22. }
+
+. postclose `mem4'
+
+. 
+. use module4_results, clear
+
+. gen rej_skew = abs(t3_skew) > 1.96
+
+. gen rej_symm = abs(t3_symm) > 1.96
+
+. 
+. di _n "MODULE 4: Basu asymmetric-timeliness coefficient in a world with NO co
+> nservatism"
+
+MODULE 4: Basu asymmetric-timeliness coefficient in a world with NO conservatis
+> m
+
+. di    "          (true b3 = 0 by construction; `reps' Monte Carlo samples of 
+> N = `ncs')"
+          (true b3 = 0 by construction; 1000 Monte Carlo samples of N = 700)
+
+. su b3_skew t3_skew rej_skew b3_symm t3_symm rej_symm
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+     b3_skew |      1,000    .2101586     .041495    .081294   .3270608
+     t3_skew |      1,000    5.076398    1.036883   1.854278   8.075105
+    rej_skew |      1,000        .999    .0316228          0          1
+     b3_symm |      1,000   -.0008101    .0400864  -.1449224   .1212494
+     t3_symm |      1,000   -.0212877    .9737298  -3.422443   2.987283
+-------------+---------------------------------------------------------
+    rej_symm |      1,000        .038    .1912919          0          1
+
+. 
+. quietly su b3_skew
+
+. local mb3 : di %5.3f r(mean)
+
+. quietly su rej_skew
+
+. local rr  : di %4.1f 100*r(mean)
+
+. 
+. * Figure 3: sampling distribution of the spurious Basu coefficient
+. twoway (histogram b3_symm, width(0.008) color(navy%40))                      
+>  ///
+>        (histogram b3_skew, width(0.008) color(maroon%40)),                   
+>  ///
+>     xline(0, lpattern(dash) lcolor(black))                                   
+>  ///
+>     xtitle("Estimated asymmetric-timeliness coefficient (b{sub:3})")         
+>  ///
+>     ytitle("Density")                                                        
+>  ///
+>     title("Spurious conservatism from skewed return noise")                  
+>  ///
+>     subtitle("True b{sub:3} = 0 in both worlds; mean spurious b{sub:3} = `mb3
+> ', rejection rate `rr'%") ///
+>     legend(order(2 "Right-skewed non-earnings return noise"                  
+>  ///
+>                  1 "Symmetric non-earnings return noise (placebo)")          
+>  ///
+>            ring(0) pos(1) cols(1))                                           
+>  ///
+>     scheme(s1color)
+
+. graph export figures/fig3_spurious_basu.png, replace width(2000)
+file figures/fig3_spurious_basu.png written in PNG format
+
+. 
+. * Figure 4: one large sample, the piecewise fit that "finds" conservatism
+. quietly {
+
+. twoway (scatter g G, mcolor(gs8) msymbol(oh))                                
+>  ///
+>        (line ghat G if G < 0, lcolor(maroon) lwidth(thick))                  
+>  ///
+>        (line ghat G if G >= 0, lcolor(navy) lwidth(thick)),                  
+>  ///
+>     xline(0, lpattern(dot) lcolor(black))                                    
+>  ///
+>     xtitle("Return (G)") ytitle("Earnings change (g), portfolio means")      
+>  ///
+>     title("The piecewise reverse regression 'finds' conservatism")           
+>  ///
+>     subtitle("Data generated with perfectly symmetric earnings timeliness")  
+>  ///
+>     legend(order(2 "Fitted slope, bad news (steeper)"                        
+>  ///
+>                  3 "Fitted slope, good news") ring(0) pos(5) cols(1))        
+>  ///
+>     scheme(s1color)
+
+. graph export figures/fig4_basu_piecewise.png, replace width(2000)
+file figures/fig4_basu_piecewise.png written in PNG format
+
+. 
+. *****************************************************************************
+> ***
+. * Clean up intermediate datasets, keep results + figures + log
+. *****************************************************************************
+> ***
+. capture erase module3_year.dta
+
+. 
+. di _n "Done. Figures are in figures/; results datasets: module1_results.dta,"
+
+Done. Figures are in figures/; results datasets: module1_results.dta,
+
+. di    "module3_results.dta, module4_results.dta; log: reverse_regression.log"
+module3_results.dta, module4_results.dta; log: reverse_regression.log
+
+. 
+. log close
+      name:  <unnamed>
+       log:  /Users/sbb151/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUn
+> iversity/ACCTG 597A/acctg597a-research-design/week01-reverse-regression/rever
+> se_regression.log
+  log type:  text
+ closed on:  23 Aug 2026, 16:03:27
+-------------------------------------------------------------------------------

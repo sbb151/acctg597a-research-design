@@ -1,0 +1,3 @@
+*.dta
+stata.log
+.DS_Store
