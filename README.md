@@ -9,6 +9,7 @@ Every `.do` file is **self-contained**: it generates its own simulated data, so 
 | Week | Folder | Design flaw | Focal paper |
 |---|---|---|---|
 | 1 | `week01-reverse-regression/` | Reverse regression as a "fix" for errors-in-variables; grouping by the dependent variable | Beaver, Lambert, and Ryan (1987, *JAE*) |
+| 4 | `week04-basu-asymmetric-timeliness/` | Spurious asymmetric timeliness from the piecewise reverse regression | Basu (1997, *JAE*) |
 
 ## Running the code
 

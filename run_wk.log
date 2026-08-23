@@ -1,3 +1,87 @@
+
+  ___  ____  ____  ____  ____ ®
+ /__    /   ____/   /   ____/      StataNow 19.5
+___/   /   /___/   /   /___/       MP—Parallel Edition
+
+ Statistics and Data Science       Copyright 1985-2025 StataCorp LLC
+                                   StataCorp
+                                   4905 Lakeway Drive
+                                   College Station, Texas 77845 USA
+                                   800-782-8272        https://www.stata.com
+                                   979-696-4600        service@stata.com
+
+Stata license: Unlimited-user 4-core network, expiring 30 Sep 2026
+Serial number: 501909300653
+  Licensed to: Sam Bonsall
+               Smeal College of Business
+
+Notes:
+      1. Stata is running in batch mode.
+      2. Unicode is supported; see help unicode_advice.
+      3. More than 2 billion observations are allowed; see help obs_advice.
+      4. Maximum number of variables is set to 5,000 but can be increased;
+          see help set_maxvar.
+
+
+Running /Users/sbb151/Library/Application Support/Stata/profile.do ...
+
+. do /private/tmp/claude-501/-Users-sbb151-Library-CloudStorage-OneDrive-ThePen
+> nsylvaniaStateUniversity-ACCTG-597A/91762bda-8fac-4937-a442-b332186d3456/scra
+> tchpad/run_wk.do 
+
+. cd "/Users/sbb151/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUniversit
+> y/ACCTG 597A/acctg597a-research-design/week01-reverse-regression"
+/Users/sbb151/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUniversity/ACCT
+> G 597A/acctg597a-research-design/week01-reverse-regression
+
+. do "reverse_regression.do"
+
+. *****************************************************************************
+> ***
+. * ACCTG 597A -- Research Design Module, Week 1
+. * The Reverse Regression Fallacy: Beaver, Lambert, and Ryan (1987, JAE)
+. *
+. * Purpose: Demonstrate by simulation that
+. *   (1) the reverse regression coefficient recovers the forward (structural)
+. *       coefficient only when R-squared = 1 (BLR's own Property 3: gamma*delt
+> a
+. *       = R^2), so with the R^2 ~ 0.13 typical of return-earnings regressions
+. *       the implied coefficient is inflated by a factor of 1/R^2 ~ 7.7;
+. *   (2) the "measurement error" BLR invoke lives in a latent construct
+. *       (permanent/economic income), not in observed earnings, so two
+. *       observationally equivalent worlds -- one with transitory earnings,
+. *       one with none -- produce identical regression output: delta is not
+. *       identified as a structural parameter;
+. *   (3) grouping data by the DEPENDENT variable mechanically inflates the
+. *       slope toward gamma/R^2 even with NO measurement error anywhere
+. *       (replicating BLR's Table 1 escalation 0.31 -> 2.30 in a world where
+. *       the true coefficient is 0.31).
+. *
+. * Requirements: base Stata (no user-written packages). Runtime ~1-2 minutes.
+. * All data are simulated; every true parameter is known by construction.
+. *
+. * Calibration: BLR (1987) Tables 1-2 -- forward gamma-hat = 0.31, mean
+. * R^2 = 0.13, reverse delta-hat = 0.59, grouped-by-G coefficient at the
+. * 5-portfolio level = 2.30, predicted asymptote gamma/R^2 = 2.38.
+. *****************************************************************************
+> ***
+. 
+. version 17
+
+. clear all
+
+. set more off
+
+. set seed 597
+
+. 
+. * All output lands next to this file. cd to the folder containing this .do
+. * file before running, or run via:  do reverse_regression.do
+. capture mkdir figures
+
+. capture log close
+
+. log using reverse_regression.log, replace text
 -------------------------------------------------------------------------------
       name:  <unnamed>
        log:  /Users/sbb151/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUn
@@ -497,3 +581,266 @@ module3_results.dta; log: reverse_regression.log
   log type:  text
  closed on:  23 Aug 2026, 17:05:48
 -------------------------------------------------------------------------------
+
+. 
+end of do-file
+
+. cd "/Users/sbb151/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUniversit
+> y/ACCTG 597A/acctg597a-research-design/week04-basu-asymmetric-timeliness"
+/Users/sbb151/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUniversity/ACCT
+> G 597A/acctg597a-research-design/week04-basu-asymmetric-timeliness
+
+. do "basu_spurious_timeliness.do"
+
+. *****************************************************************************
+> ***
+. * ACCTG 597A -- Research Design Module, Week 4
+. * The Basu (1997) Legacy: Spurious Asymmetric Timeliness from the
+. * Piecewise Reverse Regression
+. *
+. * Companion to the Week 1 module (week01-reverse-regression/), which shows
+. * that the reverse regression of earnings on returns -- introduced by
+. * Beaver, Lambert, and Ryan (1987, JAE) -- recovers the forward coefficient
+. * only when R-squared = 1 and that grouping by the dependent variable is
+. * mechanically biased. Basu (1997, JAE) builds the conditional-conservatism
+. * literature on the same earnings-on-returns direction, adding a piecewise
+. * split on the sign of returns. This module shows that design produces
+. * spurious "asymmetric timeliness" in a world with zero conservatism.
+. *
+. * Requirements: base Stata (no user-written packages). Runtime ~1 minute.
+. * All data are simulated; every true parameter is known by construction.
+. *****************************************************************************
+> ***
+. 
+. version 17
+
+. clear all
+
+. set more off
+
+. set seed 597
+
+. 
+. * All output lands next to this file. cd to the folder containing this .do
+. * file before running, or run via:  do basu_spurious_timeliness.do
+. capture mkdir figures
+
+. capture log close
+
+. log using basu_spurious_timeliness.log, replace text
+(file
+    /Users/sbb151/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUniversit
+    > y/ACCTG
+    597A/acctg597a-research-design/week04-basu-asymmetric-timeliness/basu_spu
+    > rious_timeliness.log not found)
+-------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/sbb151/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUn
+> iversity/ACCTG 597A/acctg597a-research-design/week04-basu-asymmetric-timeline
+> ss/basu_spurious_timeliness.log
+  log type:  text
+ opened on:  23 Aug 2026, 17:05:48
+
+. 
+. *****************************************************************************
+> ***
+. * MODULE 4: The Basu (1997) legacy -- spurious asymmetric timeliness
+. *
+. * Basu's conservatism regression is a piecewise REVERSE regression:
+. *     g = b0 + b1*D + b2*G + b3*(D*G) + e,   D = 1(G < 0),
+. * and b3 > 0 is read as conservatism (earnings timelier for bad news).
+. *
+. * Simulate a world with ZERO conservatism: earnings respond to news
+. * symmetrically. But let the non-earnings component of returns be
+. * right-skewed (limited liability; growth-option and discount-rate news
+. * produce occasional large positive returns unrelated to current earnings).
+. * Then negative returns are disproportionately NEWS-driven while large
+. * positive returns are disproportionately NOISE-driven, so the reverse
+. * slope cov(g,G)/var(G) is steeper on the negative side: b3 > 0 with no
+. * conservatism whatsoever. The Basu coefficient inherits every pathology
+. * of the reverse regression: it is a statement about the variance
+. * composition of returns, not about accounting.
+. *
+. * Placebo: with SYMMETRIC non-earnings noise, b3 = 0 -- confirming the
+. * skewness of return noise, not accounting behavior, drives the result.
+. *****************************************************************************
+> ***
+. 
+. * Monte Carlo at a realistic cross-section size (BLR's annual N ~ 700)
+. local reps  = 1000
+
+. local ncs   = 700
+
+. 
+. tempname mem4
+
+. postfile `mem4' rep b3_skew t3_skew b3_symm t3_symm using module4_results, re
+> place
+(file module4_results.dta not found)
+
+. 
+. forvalues r = 1/`reps' {
+  2.     quietly {
+  3.         clear
+  4.         set obs `ncs'
+  5.         gen news = rnormal(0, 1)
+  6.         * earnings: symmetric response to news + idiosyncratic noise
+.         gen g = 0.31*news + rnormal(0, 0.5)
+  7. 
+.         * returns, version 1: right-skewed non-earnings noise
+.         * (standardized chi-square(2): mean 0, variance 1, skewness 2)
+.         gen zskew = (rchi2(2) - 2)/2
+  8.         gen G1 = news + 1.4*zskew
+  9. 
+.         * returns, version 2: symmetric non-earnings noise, same variance
+.         gen G2 = news + 1.4*rnormal(0, 1)
+ 10. 
+.         * Basu regression on each
+.         gen D1  = (G1 < 0)
+ 11.         gen DG1 = D1*G1
+ 12.         reg g D1 G1 DG1
+ 13.         local b3s = _b[DG1]
+ 14.         local t3s = _b[DG1]/_se[DG1]
+ 15. 
+.         gen D2  = (G2 < 0)
+ 16.         gen DG2 = D2*G2
+ 17.         reg g D2 G2 DG2
+ 18.         local b3n = _b[DG2]
+ 19.         local t3n = _b[DG2]/_se[DG2]
+ 20. 
+.         post `mem4' (`r') (`b3s') (`t3s') (`b3n') (`t3n')
+ 21.     }
+ 22. }
+
+. postclose `mem4'
+
+. 
+. use module4_results, clear
+
+. gen rej_skew = abs(t3_skew) > 1.96
+
+. gen rej_symm = abs(t3_symm) > 1.96
+
+. 
+. di _n "MODULE 4: Basu asymmetric-timeliness coefficient in a world with NO co
+> nservatism"
+
+MODULE 4: Basu asymmetric-timeliness coefficient in a world with NO conservatis
+> m
+
+. di    "          (true b3 = 0 by construction; `reps' Monte Carlo samples of 
+> N = `ncs')"
+          (true b3 = 0 by construction; 1000 Monte Carlo samples of N = 700)
+
+. su b3_skew t3_skew rej_skew b3_symm t3_symm rej_symm
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+     b3_skew |      1,000    .2133508    .0403483   .0872922   .3487387
+     t3_skew |      1,000    5.156901    1.009097    2.02099    9.04968
+    rej_skew |      1,000           1           0          1          1
+     b3_symm |      1,000    7.56e-06    .0413724  -.1094872   .1593331
+     t3_symm |      1,000   -.0021185    1.014166  -2.829283   3.987702
+-------------+---------------------------------------------------------
+    rej_symm |      1,000        .054    .2261308          0          1
+
+. 
+. quietly su b3_skew
+
+. local mb3 : di %5.3f r(mean)
+
+. quietly su rej_skew
+
+. local rr  : di %4.1f 100*r(mean)
+
+. 
+. * Figure 3: sampling distribution of the spurious Basu coefficient
+. twoway (histogram b3_symm, width(0.008) color(navy%40))                      
+>  ///
+>        (histogram b3_skew, width(0.008) color(maroon%40)),                   
+>  ///
+>     xline(0, lpattern(dash) lcolor(black))                                   
+>  ///
+>     xtitle("Estimated asymmetric-timeliness coefficient (b{sub:3})")         
+>  ///
+>     ytitle("Density")                                                        
+>  ///
+>     ylabel(0(2)10, angle(horizontal) format(%2.0f))                          
+>  ///
+>     title("Spurious conservatism from skewed return noise")                  
+>  ///
+>     subtitle("True b{sub:3} = 0 in both worlds; mean spurious b{sub:3} = `mb3
+> ', rejection rate `rr'%") ///
+>     legend(order(2 "Right-skewed non-earnings return noise"                  
+>  ///
+>                  1 "Symmetric non-earnings return noise (placebo)")          
+>  ///
+>            ring(1) pos(6) cols(1) size(small))                               
+>  ///
+>     scheme(s1color)
+
+. graph export figures/fig3_spurious_basu.png, replace width(2000)
+(file figures/fig3_spurious_basu.png not found)
+file figures/fig3_spurious_basu.png written in PNG format
+
+. 
+. * Figure 4: one large sample, the piecewise fit that "finds" conservatism
+. quietly {
+
+. twoway (scatter g G, mcolor(gs8) msymbol(oh))                                
+>  ///
+>        (line ghat G if G < 0, lcolor(maroon) lwidth(thick))                  
+>  ///
+>        (line ghat G if G >= 0, lcolor(navy) lwidth(thick)),                  
+>  ///
+>     xline(0, lpattern(dot) lcolor(black))                                    
+>  ///
+>     xtitle("Return (G)") ytitle("Earnings change (g)")                       
+>  ///
+>     title("The piecewise fit 'finds' conservatism")                          
+>  ///
+>     subtitle("True earnings timeliness is perfectly symmetric")              
+>  ///
+>     note("Portfolio means (50 bins) of 50,000 simulated observations")       
+>  ///
+>     ylabel(, angle(horizontal) format(%2.1f))                                
+>  ///
+>     legend(order(2 "Fitted slope, bad news (steeper)"                        
+>  ///
+>                  3 "Fitted slope, good news") ring(0) pos(5) cols(1))        
+>  ///
+>     scheme(s1color) scale(1.15)
+
+. graph export figures/fig4_basu_piecewise.png, replace width(2000)
+(file figures/fig4_basu_piecewise.png not found)
+file figures/fig4_basu_piecewise.png written in PNG format
+
+. 
+. *****************************************************************************
+> ***
+. * Keep results + figures + log
+. *****************************************************************************
+> ***
+. 
+. di _n "Done. Figures are in figures/; results dataset: module4_results.dta;"
+
+Done. Figures are in figures/; results dataset: module4_results.dta;
+
+. di    "log: basu_spurious_timeliness.log"
+log: basu_spurious_timeliness.log
+
+. 
+. log close
+      name:  <unnamed>
+       log:  /Users/sbb151/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUn
+> iversity/ACCTG 597A/acctg597a-research-design/week04-basu-asymmetric-timeline
+> ss/basu_spurious_timeliness.log
+  log type:  text
+ closed on:  23 Aug 2026, 17:05:53
+-------------------------------------------------------------------------------
+
+. 
+end of do-file
+
+. 
+end of do-file
