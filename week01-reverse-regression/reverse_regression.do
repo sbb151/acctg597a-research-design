@@ -92,6 +92,7 @@ twoway (line theory r2_target, lcolor(gs10) lwidth(thick))                   ///
     text(2.7 0.16 "BLR's world: R{sup:2} = 0.13,", place(e) size(small))      ///
     text(2.45 0.16 "implied coefficient = 0.31/0.13 = 2.38", place(e) size(small)) ///
     ytitle("Estimate of {&gamma}")                                           ///
+    ylabel(0(1)6, angle(horizontal) format(%2.1f))                           ///
     xtitle("R{sup:2} of the return-earnings relation")                       ///
     title("The reverse regression is unbiased only when R{sup:2} = 1")       ///
     subtitle("True {&gamma} = 0.31; implied coefficient 1/{&delta} = {&gamma}/R{sup:2}") ///
@@ -257,6 +258,7 @@ twoway (connected slope x if groupvar == "G", mcolor(maroon) lcolor(maroon))  //
     xlabel(1 "100" 2 "50" 3 "25" 4 "10" 5 "5")                                ///
     xtitle("Number of portfolios (coarser grouping {&rarr})")                 ///
     ytitle("Mean grouped-regression slope")                                   ///
+    ylabel(0.5(0.5)2.5, angle(horizontal) format(%2.1f))                      ///
     title("Grouping by the dependent variable inflates the slope")            ///
     subtitle("Simulation has zero measurement error, yet reproduces BLR's escalation") ///
     legend(order(1 "Simulated: grouped by G (dependent variable)"             ///
@@ -349,11 +351,12 @@ twoway (histogram b3_symm, width(0.008) color(navy%40))                       //
     xline(0, lpattern(dash) lcolor(black))                                    ///
     xtitle("Estimated asymmetric-timeliness coefficient (b{sub:3})")          ///
     ytitle("Density")                                                         ///
+    ylabel(0(2)10, angle(horizontal) format(%2.0f))                           ///
     title("Spurious conservatism from skewed return noise")                   ///
     subtitle("True b{sub:3} = 0 in both worlds; mean spurious b{sub:3} = `mb3', rejection rate `rr'%") ///
     legend(order(2 "Right-skewed non-earnings return noise"                   ///
                  1 "Symmetric non-earnings return noise (placebo)")           ///
-           ring(0) pos(1) cols(1))                                            ///
+           ring(1) pos(6) cols(1) size(small))                                ///
     scheme(s1color)
 graph export figures/fig3_spurious_basu.png, replace width(2000)
 
@@ -377,12 +380,14 @@ twoway (scatter g G, mcolor(gs8) msymbol(oh))                                 //
        (line ghat G if G < 0, lcolor(maroon) lwidth(thick))                   ///
        (line ghat G if G >= 0, lcolor(navy) lwidth(thick)),                   ///
     xline(0, lpattern(dot) lcolor(black))                                     ///
-    xtitle("Return (G)") ytitle("Earnings change (g), portfolio means")       ///
-    title("The piecewise reverse regression 'finds' conservatism")            ///
-    subtitle("Data generated with perfectly symmetric earnings timeliness")   ///
+    xtitle("Return (G)") ytitle("Earnings change (g)")                        ///
+    title("The piecewise fit 'finds' conservatism")                           ///
+    subtitle("True earnings timeliness is perfectly symmetric")               ///
+    note("Portfolio means (50 bins) of 50,000 simulated observations")        ///
+    ylabel(, angle(horizontal) format(%2.1f))                                 ///
     legend(order(2 "Fitted slope, bad news (steeper)"                         ///
                  3 "Fitted slope, good news") ring(0) pos(5) cols(1))         ///
-    scheme(s1color)
+    scheme(s1color) scale(1.15)
 graph export figures/fig4_basu_piecewise.png, replace width(2000)
 
 ********************************************************************************

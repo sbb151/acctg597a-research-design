@@ -90,7 +90,7 @@ Running /Users/sbb151/Library/Application Support/Stata/profile.do ...
 > iversity/ACCTG 597A/acctg597a-research-design/week01-reverse-regression/rever
 > se_regression.log
   log type:  text
- opened on:  23 Aug 2026, 16:03:20
+ opened on:  23 Aug 2026, 16:28:31
 
 . 
 . *****************************************************************************
@@ -192,6 +192,8 @@ MODULE 1: forward vs. implied-from-reverse estimates of gamma = .31
 >     text(2.45 0.16 "implied coefficient = 0.31/0.13 = 2.38", place(e) size(sm
 > all)) ///
 >     ytitle("Estimate of {&gamma}")                                           
+> ///
+>     ylabel(0(1)6, angle(horizontal) format(%2.1f))                           
 > ///
 >     xtitle("R{sup:2} of the return-earnings relation")                       
 > ///
@@ -535,6 +537,8 @@ file module3_results.dta saved
 >  ///
 >     ytitle("Mean grouped-regression slope")                                  
 >  ///
+>     ylabel(0.5(0.5)2.5, angle(horizontal) format(%2.1f))                     
+>  ///
 >     title("Grouping by the dependent variable inflates the slope")           
 >  ///
 >     subtitle("Simulation has zero measurement error, yet reproduces BLR's esc
@@ -677,6 +681,8 @@ MODULE 4: Basu asymmetric-timeliness coefficient in a world with NO conservatis
 >  ///
 >     ytitle("Density")                                                        
 >  ///
+>     ylabel(0(2)10, angle(horizontal) format(%2.0f))                          
+>  ///
 >     title("Spurious conservatism from skewed return noise")                  
 >  ///
 >     subtitle("True b{sub:3} = 0 in both worlds; mean spurious b{sub:3} = `mb3
@@ -685,7 +691,7 @@ MODULE 4: Basu asymmetric-timeliness coefficient in a world with NO conservatis
 >  ///
 >                  1 "Symmetric non-earnings return noise (placebo)")          
 >  ///
->            ring(0) pos(1) cols(1))                                           
+>            ring(1) pos(6) cols(1) size(small))                               
 >  ///
 >     scheme(s1color)
 
@@ -704,17 +710,21 @@ file figures/fig3_spurious_basu.png written in PNG format
 >  ///
 >     xline(0, lpattern(dot) lcolor(black))                                    
 >  ///
->     xtitle("Return (G)") ytitle("Earnings change (g), portfolio means")      
+>     xtitle("Return (G)") ytitle("Earnings change (g)")                       
 >  ///
->     title("The piecewise reverse regression 'finds' conservatism")           
+>     title("The piecewise fit 'finds' conservatism")                          
 >  ///
->     subtitle("Data generated with perfectly symmetric earnings timeliness")  
+>     subtitle("True earnings timeliness is perfectly symmetric")              
+>  ///
+>     note("Portfolio means (50 bins) of 50,000 simulated observations")       
+>  ///
+>     ylabel(, angle(horizontal) format(%2.1f))                                
 >  ///
 >     legend(order(2 "Fitted slope, bad news (steeper)"                        
 >  ///
 >                  3 "Fitted slope, good news") ring(0) pos(5) cols(1))        
 >  ///
->     scheme(s1color)
+>     scheme(s1color) scale(1.15)
 
 . graph export figures/fig4_basu_piecewise.png, replace width(2000)
 file figures/fig4_basu_piecewise.png written in PNG format
@@ -742,7 +752,7 @@ module3_results.dta, module4_results.dta; log: reverse_regression.log
 > iversity/ACCTG 597A/acctg597a-research-design/week01-reverse-regression/rever
 > se_regression.log
   log type:  text
- closed on:  23 Aug 2026, 16:03:27
+ closed on:  23 Aug 2026, 16:28:38
 -------------------------------------------------------------------------------
 
 . 
