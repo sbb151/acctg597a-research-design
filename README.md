@@ -12,6 +12,17 @@ Every `.do` file is **self-contained**: it generates its own simulated data, so 
 | 1 | `week01-valuation-models/` | Certainty-world valuation models (MV = E/r, MV = BV) implicitly assumed by ERC and value-relevance regressions | Easton and Zmijewski (1989, *JAE*) |
 | 4 | `week04-basu-asymmetric-timeliness/` | Spurious asymmetric timeliness from the piecewise reverse regression | Basu (1997, *JAE*) |
 
+## Lecture decks
+
+Slides for the in-class research-design modules are posted under `decks/` as PDFs.
+
+| Week | Deck | Module |
+|---|---|---|
+| 1 | [`decks/week01/week1_reverse_regression.pdf`](decks/week01/week1_reverse_regression.pdf) | The Reverse Regression Fallacy (Beaver, Lambert, and Ryan 1987) |
+| 1 | [`decks/week01/week1_valuation_models.pdf`](decks/week01/week1_valuation_models.pdf) | Valuation Models in Disguise (Easton and Zmijewski 1989) |
+| 1 | [`decks/week01/week1_kl_borrowing.pdf`](decks/week01/week1_kl_borrowing.pdf) | Borrowed Technology (Kormendi and Lipe 1987) |
+| 1 | [`decks/week01/week1_bmw_fact.pdf`](decks/week01/week1_bmw_fact.pdf) | A Fact Worth Explaining (Beaver, McNichols, and Wang 2020) |
+
 ## Running the code
 
 ```bash
