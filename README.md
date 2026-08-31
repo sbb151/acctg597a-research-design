@@ -22,6 +22,10 @@ Slides for the in-class research-design modules are posted under `decks/` as PDF
 | 1 | [`decks/week01/week1_valuation_models.pdf`](decks/week01/week1_valuation_models.pdf) | Valuation Models in Disguise (Easton and Zmijewski 1989) |
 | 1 | [`decks/week01/week1_kl_borrowing.pdf`](decks/week01/week1_kl_borrowing.pdf) | Borrowed Technology (Kormendi and Lipe 1987) |
 | 1 | [`decks/week01/week1_bmw_fact.pdf`](decks/week01/week1_bmw_fact.pdf) | A Fact Worth Explaining (Beaver, McNichols, and Wang 2020) |
+| 2 | [`decks/week02/week2_ohlson_model.pdf`](decks/week02/week2_ohlson_model.pdf) | The Theory the Regressions Were Missing (Ohlson 1995) |
+| 2 | [`decks/week02/week2_dechow_accruals.pdf`](decks/week02/week2_dechow_accruals.pdf) | The Value Added by Accountants (Dechow 1994) |
+| 2 | [`decks/week02/week2_vuolteenaho_returns.pdf`](decks/week02/week2_vuolteenaho_returns.pdf) | What Drives Firm-Level Stock Returns? (Vuolteenaho 2002) |
+| 2 | [`decks/week02/week2_michaely_signaling.pdf`](decks/week02/week2_michaely_signaling.pdf) | Signaling Safety (Michaely, Rossi, and Weber 2021) |
 
 ## Running the code
 
