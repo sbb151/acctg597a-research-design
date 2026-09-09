@@ -1,0 +1,959 @@
+-------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/sbb151/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUn
+> iversity/ACCTG 597A/acctg597a-research-design/week03-bgl-two-stage/bgl_two_st
+> age.log
+  log type:  text
+ opened on:   9 Sep 2026, 00:29:57
+
+. do bgl_two_stage.do
+
+. *****************************************************************************
+> ***
+. * ACCTG 597A -- Week 3: Two Stages, One Regression
+. * Beaver, Griffin, and Landsman (1982, JAE), "The Incremental Information
+. * Content of Replacement Cost Earnings," and the two-stage residual regressio
+> n.
+. *
+. * Self-contained simulation, base Stata only (version 17 or later). Run from
+. * this folder:  do bgl_two_stage.do
+. * Figures are written to figures/. Runtime about two minutes (the Monte Carlo
+. * in Module 3 dominates).
+. *
+. * Four modules:
+. *   1. Correlation tables hold nothing fixed. From BGL Table 3 (1977) the
+. *      partial correlation of PRE with return given HC is -0.02, although the
+. *      pairwise correlation is 0.30.
+. *   2. Both panels of BGL Table 4 are one regression read twice. On simulated
+. *      data calibrated to BGL, the Panel (A) residual coefficient equals the
+. *      one-regression coefficient on PRE, the Panel (B) residual coefficient
+. *      equals the one-regression coefficient on HC (same t-statistics), and
+. *      the un-orthogonalized coefficients are bivariate slopes.
+. *   3. Orthogonalizing does not reduce the standard error of the incremental
+. *      term. Monte Carlo across correlations: the two-stage and one-regressio
+> n
+. *      sampling standard deviations coincide and follow the textbook formula.
+. *   4. Simpson's paradox. Identical year-by-year slopes can pool to a slope o
+> f
+. *      the opposite sign, and zero year slopes can pool to a positive slope,
+. *      so agreement between year and pooled columns is not evidence.
+. *
+. * Calibration: BGL Table 2 (sd of HC 0.216, sd of PRE 0.377, sd of return
+. * about 0.21), Table 3 (corr(HC, PRE) = 0.84, corr(HC, R) = 0.37,
+. * corr(PRE, R) = 0.30), Table 4 (one-regression coefficients 0.39 on HC and
+. * -0.02 on PRE, R-squared 0.14, 303 firms).
+. *****************************************************************************
+> ***
+. 
+. version 17
+
+. clear all
+
+. set more off
+
+. capture mkdir figures
+
+. 
+. *****************************************************************************
+> ***
+. * Module 1: pairwise versus partial correlations (recreated from Table 3)
+. *****************************************************************************
+> ***
+. scalar r_hr  = 0.37
+
+. scalar r_pr  = 0.30
+
+. scalar r_hp  = 0.84
+
+. scalar p_pre = (r_pr - r_hp*r_hr) / sqrt((1 - r_hp^2)*(1 - r_hr^2))
+
+. scalar p_hc  = (r_hr - r_hp*r_pr) / sqrt((1 - r_hp^2)*(1 - r_pr^2))
+
+. di _n "Module 1: partial corr(PRE, R | HC) = " %6.3f p_pre ///
+>       ";  partial corr(HC, R | PRE) = " %6.3f p_hc
+
+Module 1: partial corr(PRE, R | HC) = -0.021;  partial corr(HC, R | PRE) =  0.2
+> 28
+
+. 
+. clear
+
+. set obs 4
+Number of observations (_N) was 0, now 4.
+
+. gen x     = .
+(4 missing values generated)
+
+. gen value = .
+(4 missing values generated)
+
+. gen kind  = .
+(4 missing values generated)
+
+. replace x = 1 in 1
+(1 real change made)
+
+. replace x = 2 in 2
+(1 real change made)
+
+. replace x = 4 in 3
+(1 real change made)
+
+. replace x = 5 in 4
+(1 real change made)
+
+. replace value = r_pr  in 1
+(1 real change made)
+
+. replace value = p_pre in 2
+(1 real change made)
+
+. replace value = r_hr  in 3
+(1 real change made)
+
+. replace value = p_hc  in 4
+(1 real change made)
+
+. replace kind = 1 in 1
+(1 real change made)
+
+. replace kind = 2 in 2
+(1 real change made)
+
+. replace kind = 1 in 3
+(1 real change made)
+
+. replace kind = 2 in 4
+(1 real change made)
+
+. local lab_pre_pair : di %4.2f r_pr
+
+. local lab_pre_part : di %5.2f p_pre
+
+. local lab_hc_pair  : di %4.2f r_hr
+
+. local lab_hc_part  : di %4.2f p_hc
+
+. 
+. twoway (bar value x if kind == 1, barwidth(0.8) color(navy))               //
+> /
+>        (bar value x if kind == 2, barwidth(0.8) color(maroon)),            //
+> /
+>     text(0.335 1 "`lab_pre_pair'", color(navy) size(medium))               //
+> /
+>     text(0.03  2 "`lab_pre_part'", color(maroon) size(medium))             //
+> /
+>     text(0.405 4 "`lab_hc_pair'", color(navy) size(medium))                //
+> /
+>     text(0.26  5 "`lab_hc_part'", color(maroon) size(medium))              //
+> /
+>     text(0.47 1.5 "Replacement cost (PRE)", color(black) size(medsmall))   //
+> /
+>     text(0.47 4.5 "Historical cost (HC)", color(black) size(medsmall))     //
+> /
+>     xlabel(1 "pairwise" 2 "partial" 4 "pairwise" 5 "partial", noticks)     //
+> /
+>     xscale(range(0.3 5.7))                                                 //
+> /
+>     ylabel(-0.1(0.1)0.5, angle(horizontal) format(%3.1f))                  //
+> /
+>     yline(0, lcolor(gs8) lwidth(thin))                                     //
+> /
+>     xtitle("") ytitle("Correlation with security return")                  //
+> /
+>     title("Pairwise 0.30 becomes partial -0.02 given HC")                  //
+> /
+>     subtitle("Recreated from BGL (1982) Table 3, 1977")                    //
+> /
+>     legend(off) scheme(s1color)
+
+. graph export figures/fig1_pairwise_partial.png, replace width(2000)
+(file figures/fig1_pairwise_partial.png not found)
+file figures/fig1_pairwise_partial.png written in PNG format
+
+. 
+. *****************************************************************************
+> ***
+. * Module 2: both panels of Table 4 are one regression read twice
+. *****************************************************************************
+> ***
+. clear
+
+. set seed 228
+
+. set obs 303
+Number of observations (_N) was 0, now 303.
+
+. gen hc  = 0.134 + 0.216*rnormal()
+
+. gen pre = 0.148 + 1.46*(hc - 0.134) + 0.206*rnormal()
+
+. gen r   = 0.018 + 0.39*(hc - 0.134) - 0.02*(pre - 0.148) + 0.19*rnormal()
+
+. 
+. di _n "Module 2: simulated correlations (compare BGL Table 3: 0.84, 0.37, 0.3
+> 0)"
+
+Module 2: simulated correlations (compare BGL Table 3: 0.84, 0.37, 0.30)
+
+. corr hc pre r
+(obs=303)
+
+             |       hc      pre        r
+-------------+---------------------------
+          hc |   1.0000
+         pre |   0.8345   1.0000
+           r |   0.3777   0.3018   1.0000
+
+
+. 
+. * Panel (A): orthogonalize PRE against HC
+. reg pre hc
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(1, 301)       =    690.53
+       Model |  30.2306352         1  30.2306352   Prob > F        =    0.0000
+    Residual |  13.1775263       301  .043779157   R-squared       =    0.6964
+-------------+----------------------------------   Adj R-squared   =    0.6954
+       Total |  43.4081615       302  .143735634   Root MSE        =    .20923
+
+------------------------------------------------------------------------------
+         pre | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          hc |    1.50025   .0570918    26.28   0.000     1.387901      1.6126
+       _cons |  -.0494494   .0141335    -3.50   0.001    -.0772623   -.0216365
+------------------------------------------------------------------------------
+
+. scalar cA = _b[hc]
+
+. predict zA, resid
+
+. reg r hc zA
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(2, 300)       =     25.08
+       Model |  1.93929991         2  .969649953   Prob > F        =    0.0000
+    Residual |  11.5998374       300  .038666125   R-squared       =    0.1432
+-------------+----------------------------------   Adj R-squared   =    0.1375
+       Total |  13.5391374       302  .044831581   Root MSE        =    .19664
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          hc |   .3791984   .0536544     7.07   0.000     .2736117     .484785
+          zA |  -.0246186   .0541687    -0.45   0.650    -.1312173    .0819802
+       _cons |  -.0180405   .0132825    -1.36   0.175    -.0441792    .0080982
+------------------------------------------------------------------------------
+
+. scalar A_hc = _b[hc]
+
+. scalar A_z  = _b[zA]
+
+. scalar A_zt = _b[zA]/_se[zA]
+
+. 
+. * Panel (B): orthogonalize HC against PRE
+. reg hc pre
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(1, 301)       =    690.53
+       Model |  9.35396445         1  9.35396445   Prob > F        =    0.0000
+    Residual |  4.07739078       301  .013546149   R-squared       =    0.6964
+-------------+----------------------------------   Adj R-squared   =    0.6954
+       Total |  13.4313552       302  .044474686   Root MSE        =    .11639
+
+------------------------------------------------------------------------------
+          hc | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         pre |   .4642075   .0176653    26.28   0.000     .4294443    .4989707
+       _cons |   .0624851   .0071659     8.72   0.000     .0483835    .0765867
+------------------------------------------------------------------------------
+
+. scalar cB = _b[pre]
+
+. predict zB, resid
+
+. reg r pre zB
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(2, 300)       =     25.08
+       Model |  1.93929992         2  .969649959   Prob > F        =    0.0000
+    Residual |  11.5998374       300  .038666125   R-squared       =    0.1432
+-------------+----------------------------------   Adj R-squared   =    0.1375
+       Total |  13.5391374       302  .044831581   Root MSE        =    .19664
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         pre |   .1685532   .0298456     5.65   0.000       .10982    .2272864
+          zB |   .4161324    .097381     4.27   0.000     .2244961    .6077687
+       _cons |   .0067442   .0121068     0.56   0.578    -.0170808    .0305692
+------------------------------------------------------------------------------
+
+. scalar B_pre = _b[pre]
+
+. scalar B_z   = _b[zB]
+
+. scalar B_zt  = _b[zB]/_se[zB]
+
+. 
+. * One regression
+. reg r hc pre
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(2, 300)       =     25.08
+       Model |  1.93929991         2  .969649953   Prob > F        =    0.0000
+    Residual |  11.5998374       300  .038666125   R-squared       =    0.1432
+-------------+----------------------------------   Adj R-squared   =    0.1375
+       Total |  13.5391374       302  .044831581   Root MSE        =    .19664
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          hc |   .4161324    .097381     4.27   0.000     .2244961    .6077687
+         pre |  -.0246186   .0541687    -0.45   0.650    -.1312173    .0819801
+       _cons |  -.0192579   .0135499    -1.42   0.156    -.0459228     .007407
+------------------------------------------------------------------------------
+
+. scalar O_hc   = _b[hc]
+
+. scalar O_hct  = _b[hc]/_se[hc]
+
+. scalar O_pre  = _b[pre]
+
+. scalar O_pret = _b[pre]/_se[pre]
+
+. 
+. * Bivariate slopes
+. reg r hc
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(1, 301)       =     50.08
+       Model |  1.93131334         1  1.93131334   Prob > F        =    0.0000
+    Residual |   11.607824       301  .038564199   R-squared       =    0.1426
+-------------+----------------------------------   Adj R-squared   =    0.1398
+       Total |  13.5391374       302  .044831581   Root MSE        =    .19638
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          hc |   .3791984   .0535836     7.08   0.000     .2737524    .4846444
+       _cons |  -.0180405    .013265    -1.36   0.175    -.0441444    .0080633
+------------------------------------------------------------------------------
+
+. scalar biv_hc = _b[hc]
+
+. reg r pre
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(1, 301)       =     30.16
+       Model |  1.23323372         1  1.23323372   Prob > F        =    0.0000
+    Residual |  12.3059036       301  .040883401   R-squared       =    0.0911
+-------------+----------------------------------   Adj R-squared   =    0.0881
+       Total |  13.5391374       302  .044831581   Root MSE        =     .2022
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         pre |   .1685532   .0306894     5.49   0.000     .1081603    .2289461
+       _cons |   .0067442   .0124491     0.54   0.588    -.0177541    .0312424
+------------------------------------------------------------------------------
+
+. scalar biv_pre = _b[pre]
+
+. 
+. di _n "Identity checks (zero to machine precision):"
+
+Identity checks (zero to machine precision):
+
+. di "  Panel (A) residual coef - one-regression PRE coef : " %10.6f (A_z - O_p
+> re)
+  Panel (A) residual coef - one-regression PRE coef :   0.000000
+
+. di "  Panel (A) residual t    - one-regression PRE t    : " %10.6f (A_zt - O_
+> pret)
+  Panel (A) residual t    - one-regression PRE t    :   0.000000
+
+. di "  Panel (B) residual coef - one-regression HC coef  : " %10.6f (B_z - O_h
+> c)
+  Panel (B) residual coef - one-regression HC coef  :   0.000000
+
+. di "  Panel (B) residual t    - one-regression HC t     : " %10.6f (B_zt - O_
+> hct)
+  Panel (B) residual t    - one-regression HC t     :   0.000000
+
+. di "  Panel (A) HC coef - (b_HC + c_A b_PRE)             : " %10.6f (A_hc - (
+> O_hc + cA*O_pre))
+  Panel (A) HC coef - (b_HC + c_A b_PRE)             :   0.000000
+
+. di "  Panel (A) HC coef - bivariate slope of R on HC     : " %10.6f (A_hc - b
+> iv_hc)
+  Panel (A) HC coef - bivariate slope of R on HC     :   0.000000
+
+. di "  Panel (B) PRE coef - (b_PRE + c_B b_HC)            : " %10.6f (B_pre - 
+> (O_pre + cB*O_hc))
+  Panel (B) PRE coef - (b_PRE + c_B b_HC)            :   0.000000
+
+. di "  Panel (B) PRE coef - bivariate slope of R on PRE   : " %10.6f (B_pre - 
+> biv_pre)
+  Panel (B) PRE coef - bivariate slope of R on PRE   :   0.000000
+
+. 
+. * Added-variable plot (Frisch-Waugh-Lovell): the one-regression coefficient
+. * on PRE, drawn as a picture
+. reg r hc
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(1, 301)       =     50.08
+       Model |  1.93131334         1  1.93131334   Prob > F        =    0.0000
+    Residual |   11.607824       301  .038564199   R-squared       =    0.1426
+-------------+----------------------------------   Adj R-squared   =    0.1398
+       Total |  13.5391374       302  .044831581   Root MSE        =    .19638
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          hc |   .3791984   .0535836     7.08   0.000     .2737524    .4846444
+       _cons |  -.0180405    .013265    -1.36   0.175    -.0441444    .0080633
+------------------------------------------------------------------------------
+
+. predict r_res, resid
+
+. reg pre hc
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(1, 301)       =    690.53
+       Model |  30.2306352         1  30.2306352   Prob > F        =    0.0000
+    Residual |  13.1775263       301  .043779157   R-squared       =    0.6964
+-------------+----------------------------------   Adj R-squared   =    0.6954
+       Total |  43.4081615       302  .143735634   Root MSE        =    .20923
+
+------------------------------------------------------------------------------
+         pre | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          hc |    1.50025   .0570918    26.28   0.000     1.387901      1.6126
+       _cons |  -.0494494   .0141335    -3.50   0.001    -.0772623   -.0216365
+------------------------------------------------------------------------------
+
+. predict pre_res, resid
+
+. reg r pre
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(1, 301)       =     30.16
+       Model |  1.23323372         1  1.23323372   Prob > F        =    0.0000
+    Residual |  12.3059036       301  .040883401   R-squared       =    0.0911
+-------------+----------------------------------   Adj R-squared   =    0.0881
+       Total |  13.5391374       302  .044831581   Root MSE        =     .2022
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         pre |   .1685532   .0306894     5.49   0.000     .1081603    .2289461
+       _cons |   .0067442   .0124491     0.54   0.588    -.0177541    .0312424
+------------------------------------------------------------------------------
+
+. local b_raw : di %4.2f _b[pre]
+
+. reg r_res pre_res
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(1, 301)       =      0.21
+       Model |  .007986568         1  .007986568   Prob > F        =    0.6493
+    Residual |  11.5998374       301  .038537666   R-squared       =    0.0007
+-------------+----------------------------------   Adj R-squared   =   -0.0026
+       Total |  11.6078239       302  .038436503   Root MSE        =    .19631
+
+------------------------------------------------------------------------------
+       r_res | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+     pre_res |  -.0246186   .0540786    -0.46   0.649    -.1310387    .0818015
+       _cons |   4.59e-10   .0112777     0.00   1.000    -.0221932    .0221932
+------------------------------------------------------------------------------
+
+. local b_part : di %4.2f _b[pre_res]
+
+. local t_part : di %3.1f (_b[pre_res]/_se[pre_res])
+
+. 
+. twoway (scatter r pre, mcolor(navy%45) msize(small))                       //
+> /
+>        (lfit r pre, lcolor(navy) lwidth(thick)),                           //
+> /
+>     text(0.66 -0.95 "slope `b_raw'", color(navy) size(medium) placement(e)) /
+> //
+>     xtitle("PRE (percentage change)") ytitle("Return")                     //
+> /
+>     xlabel(-1(0.5)1.5, format(%3.1f)) ylabel(-0.6(0.3)0.6, angle(horizontal) 
+> format(%3.1f)) ///
+>     yscale(range(-0.7 0.75))                                               //
+> /
+>     title("Raw: R on PRE") legend(off) scheme(s1color)                     //
+> /
+>     name(g_raw, replace) nodraw
+
+. twoway (scatter r_res pre_res, mcolor(maroon%45) msize(small))             //
+> /
+>        (lfit r_res pre_res, lcolor(maroon) lwidth(thick)),                 //
+> /
+>     text(0.66 -0.95 "slope `b_part' (t = `t_part')", color(maroon) size(mediu
+> m) placement(e)) ///
+>     xtitle("PRE residual, given HC") ytitle("Return residual, given HC")   //
+> /
+>     xlabel(-1(0.5)1, format(%3.1f)) ylabel(-0.6(0.3)0.6, angle(horizontal) fo
+> rmat(%3.1f)) ///
+>     yscale(range(-0.7 0.75))                                               //
+> /
+>     title("Holding HC fixed: added-variable plot") legend(off) scheme(s1color
+> ) ///
+>     name(g_avp, replace) nodraw
+
+. graph combine g_raw g_avp, rows(1) xsize(10) ysize(4.4)                     /
+> //
+>     title("The PRE association vanishes once HC is held fixed")             /
+> //
+>     subtitle("Simulated data calibrated to BGL (1982) Tables 2-4, N = 303") /
+> //
+>     scheme(s1color)
+
+. graph export figures/fig2_added_variable.png, replace width(2000)
+(file figures/fig2_added_variable.png not found)
+file figures/fig2_added_variable.png written in PNG format
+
+. 
+. *****************************************************************************
+> ***
+. * Module 3: orthogonalizing does not shrink the standard error
+. *****************************************************************************
+> ***
+. set seed 19841201
+
+. local N      = 303
+
+. local reps   = 400
+
+. local sig_e  = 0.19
+
+. local sd_hc  = 0.216
+
+. local sd_pre = 0.377
+
+. 
+. tempname sims
+
+. tempfile simsfile repfile curvefile
+
+. postfile `sims' rho sd_one sd_two se_formula using `simsfile', replace
+(file /var/folders/ms/1p996tm15bz7p8szd7_97sk00000gn/T//St44160.000001 not
+    found)
+
+. di _n "Module 3: Monte Carlo (400 replications per correlation)"
+
+Module 3: Monte Carlo (400 replications per correlation)
+
+. foreach rho in 0 0.3 0.5 0.7 0.84 0.9 0.95 0.98 {
+  2.     tempname acc
+  3.     postfile `acc' b_one b_two using `repfile', replace
+  4.     forvalues i = 1/`reps' {
+  5.         quietly {
+  6.             clear
+  7.             set obs `N'
+  8.             gen hc  = `sd_hc'*rnormal()
+  9.             gen pre = `sd_pre'*(`rho'*(hc/`sd_hc') + sqrt(1 - `rho'^2)*rno
+> rmal())
+ 10.             gen y   = 0.39*hc + `sig_e'*rnormal()
+ 11.             reg y hc pre
+ 12.             scalar b1 = _b[pre]
+ 13.             reg pre hc
+ 14.             predict z, resid
+ 15.             reg y hc z
+ 16.             scalar b2 = _b[z]
+ 17.             post `acc' (b1) (b2)
+ 18.         }
+ 19.     }
+ 20.     postclose `acc'
+ 21.     quietly use `repfile', clear
+ 22.     quietly sum b_one
+ 23.     scalar s1 = r(sd)
+ 24.     quietly sum b_two
+ 25.     scalar s2 = r(sd)
+ 26.     scalar sf = `sig_e'/(sqrt(`N')*`sd_pre'*sqrt(1 - `rho'^2))
+ 27.     di "  rho = " %4.2f `rho' "  sd(one regression) = " %6.4f s1 ///
+>        "  sd(two-stage) = " %6.4f s2 "  formula = " %6.4f sf
+ 28.     post `sims' (`rho') (s1) (s2) (sf)
+ 29. }
+(file /var/folders/ms/1p996tm15bz7p8szd7_97sk00000gn/T//St44160.000002 not
+    found)
+  rho = 0.00  sd(one regression) = 0.0301  sd(two-stage) = 0.0301  formula = 0.
+> 0290
+  rho = 0.30  sd(one regression) = 0.0301  sd(two-stage) = 0.0301  formula = 0.
+> 0304
+  rho = 0.50  sd(one regression) = 0.0310  sd(two-stage) = 0.0310  formula = 0.
+> 0334
+  rho = 0.70  sd(one regression) = 0.0423  sd(two-stage) = 0.0423  formula = 0.
+> 0405
+  rho = 0.84  sd(one regression) = 0.0558  sd(two-stage) = 0.0558  formula = 0.
+> 0534
+  rho = 0.90  sd(one regression) = 0.0674  sd(two-stage) = 0.0674  formula = 0.
+> 0664
+  rho = 0.95  sd(one regression) = 0.0937  sd(two-stage) = 0.0937  formula = 0.
+> 0927
+  rho = 0.98  sd(one regression) = 0.1355  sd(two-stage) = 0.1355  formula = 0.
+> 1455
+
+. postclose `sims'
+
+. 
+. clear
+
+. set obs 200
+Number of observations (_N) was 0, now 200.
+
+. gen rho_c = 0.985*(_n - 1)/199
+
+. gen se_c  = `sig_e'/(sqrt(`N')*`sd_pre'*sqrt(1 - rho_c^2))
+
+. save `curvefile', replace
+(file /var/folders/ms/1p996tm15bz7p8szd7_97sk00000gn/T//St44160.000003 not
+    found)
+file /var/folders/ms/1p996tm15bz7p8szd7_97sk00000gn/T//St44160.000003 saved
+    as .dta format
+
+. use `simsfile', clear
+
+. append using `curvefile'
+
+. 
+. twoway (line se_c rho_c, lcolor(gs10) lwidth(medthick))                     /
+> //
+>        (scatter sd_one rho, mcolor(navy) msymbol(circle) msize(large))       
+> ///
+>        (scatter sd_two rho, mcolor(maroon) msymbol(square_hollow) msize(large
+> ) mlwidth(medthick)), ///
+>     xline(0.84, lcolor(gs8) lpattern(dash))                                  
+> ///
+>     text(0.150 0.82 "BGL: corr = 0.84, VIF = 3.4", color(black) size(medium) 
+> placement(w)) ///
+>     text(0.095 0.02 "navy circles: one regression", color(navy) size(medium) 
+> placement(e)) ///
+>     text(0.080 0.02 "maroon squares: two-stage residual coefficient", color(m
+> aroon) size(medium) placement(e)) ///
+>     text(0.065 0.02 "gray curve: textbook formula", color(gs8) size(medium) p
+> lacement(e)) ///
+>     xtitle("Correlation between HC and PRE")                                 
+> ///
+>     ytitle("Sampling s.d. of the incremental PRE coefficient")               
+> ///
+>     xlabel(0(0.2)1, format(%3.1f)) ylabel(0(0.03)0.18, angle(horizontal) form
+> at(%4.2f)) ///
+>     yscale(range(0 0.185))                                                   
+> ///
+>     title("Orthogonalizing leaves the standard error unchanged")             
+> ///
+>     subtitle("Monte Carlo, 400 cross-sections of 303 firms per point")       
+> ///
+>     legend(off) scheme(s1color) xsize(10) ysize(5.2)
+
+. graph export figures/fig3_collinearity_se.png, replace width(2000)
+(file figures/fig3_collinearity_se.png not found)
+file figures/fig3_collinearity_se.png written in PNG format
+
+. 
+. *****************************************************************************
+> ***
+. * Module 4: Simpson's paradox
+. *****************************************************************************
+> ***
+. set seed 19771231
+
+. clear
+
+. set obs 303
+Number of observations (_N) was 0, now 303.
+
+. gen firm = _n
+
+. gen u  = 0.216*rnormal()
+
+. gen e  = 0.19*rnormal()
+
+. tempfile draws
+
+. save `draws', replace
+(file /var/folders/ms/1p996tm15bz7p8szd7_97sk00000gn/T//St44160.000004 not
+    found)
+file /var/folders/ms/1p996tm15bz7p8szd7_97sk00000gn/T//St44160.000004 saved
+    as .dta format
+
+. 
+. * Panel (a): identical within-year slopes (0.36), pooled slope negative
+. use `draws', clear
+
+. expand 2
+(303 observations created)
+
+. bysort firm: gen year = cond(_n == 1, 1977, 1978)
+
+. gen hc = cond(year == 1977, 0.10, 0.55) + u
+
+. gen r  = cond(year == 1977, 0.16, -0.16) + 0.36*u + e
+
+. reg r hc if year == 1977
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(1, 301)       =     47.41
+       Model |  1.65054799         1  1.65054799   Prob > F        =    0.0000
+    Residual |   10.479432       301  .034815389   R-squared       =    0.1361
+-------------+----------------------------------   Adj R-squared   =    0.1332
+       Total |    12.12998       302  .040165497   Root MSE        =    .18659
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          hc |   .3356961   .0487549     6.89   0.000     .2397526    .4316396
+       _cons |   .1339595   .0116784    11.47   0.000     .1109778    .1569412
+------------------------------------------------------------------------------
+
+. local a77 : di %4.2f _b[hc]
+
+. reg r hc if year == 1978
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(1, 301)       =     47.41
+       Model |  1.65054801         1  1.65054801   Prob > F        =    0.0000
+    Residual |  10.4794321       301  .034815389   R-squared       =    0.1361
+-------------+----------------------------------   Adj R-squared   =    0.1332
+       Total |  12.1299801       302  .040165497   Root MSE        =    .18659
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          hc |   .3356961   .0487549     6.89   0.000     .2397526    .4316396
+       _cons |  -.3371037   .0286551   -11.76   0.000    -.3934935    -.280714
+------------------------------------------------------------------------------
+
+. local a78 : di %4.2f _b[hc]
+
+. reg r hc
+
+      Source |       SS           df       MS      Number of obs   =       606
+-------------+----------------------------------   F(1, 604)       =     38.69
+       Model |  2.39409419         1  2.39409419   Prob > F        =    0.0000
+    Residual |  37.3794659       604  .061886533   R-squared       =    0.0602
+-------------+----------------------------------   Adj R-squared   =    0.0586
+       Total |    39.77356       605  .065741422   Root MSE        =    .24877
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          hc |  -.1998006   .0321236    -6.22   0.000    -.2628882   -.1367131
+       _cons |   .0698231   .0144166     4.84   0.000     .0415105    .0981358
+------------------------------------------------------------------------------
+
+. local apool : di %4.2f _b[hc]
+
+. reg r hc i.year
+
+      Source |       SS           df       MS      Number of obs   =       606
+-------------+----------------------------------   F(2, 603)       =    270.66
+       Model |   18.814696         2  9.40734798   Prob > F        =    0.0000
+    Residual |  20.9588641       603  .034757652   R-squared       =    0.4730
+-------------+----------------------------------   Adj R-squared   =    0.4713
+       Total |    39.77356       605  .065741422   Root MSE        =    .18643
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          hc |   .3356961   .0344463     9.75   0.000     .2680468    .4033454
+             |
+        year |
+       1978  |  -.4710633   .0216725   -21.74   0.000    -.5136261   -.4285004
+             |
+       _cons |   .1339595   .0111998    11.96   0.000     .1119642    .1559549
+------------------------------------------------------------------------------
+
+. local afe : di %4.2f _b[hc]
+
+. di _n "Module 4, panel (a): 1977 = `a77', 1978 = `a78', pooled = `apool', poo
+> led with year effects = `afe'"
+
+Module 4, panel (a): 1977 = 0.34, 1978 = 0.34, pooled = -0.20, pooled with year
+>  effects = 0.34
+
+. 
+. twoway (scatter r hc if year == 1977, mcolor(navy%40) msize(small))        //
+> /
+>        (scatter r hc if year == 1978, mcolor(maroon%40) msize(small))      //
+> /
+>        (lfit r hc if year == 1977, lcolor(navy) lwidth(thick))             //
+> /
+>        (lfit r hc if year == 1978, lcolor(maroon) lwidth(thick))           //
+> /
+>        (lfit r hc, lcolor(black) lwidth(thick) lpattern(dash)),            //
+> /
+>     text(0.74 -0.55 "1977: slope `a77'", color(navy) size(medsmall) placement
+> (e))   ///
+>     text(0.74 0.66 "1978: slope `a78'", color(maroon) size(medsmall) placemen
+> t(e))  ///
+>     text(-0.72 0.55 "pooled: slope `apool'", color(black) size(medsmall) plac
+> ement(e)) ///
+>     xtitle("HC (percentage change)") ytitle("Return")                       /
+> //
+>     xlabel(-0.5(0.5)1.5, format(%3.1f)) ylabel(-0.6(0.3)0.6, angle(horizontal
+> ) format(%3.1f)) ///
+>     yscale(range(-0.8 0.78))                                                /
+> //
+>     title("(a) Identical year slopes, negative pooled slope")               /
+> //
+>     legend(off) scheme(s1color) name(g_a, replace) nodraw
+
+. 
+. * Panel (b): zero within-year slopes, pooled slope positive
+. use `draws', clear
+
+. expand 2
+(303 observations created)
+
+. bysort firm: gen year = cond(_n == 1, 1977, 1978)
+
+. gen hc = cond(year == 1977, 0.10, 0.55) + u
+
+. gen r  = cond(year == 1977, -0.15, 0.16) + 0.0*u + e
+
+. reg r hc if year == 1977
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(1, 301)       =      0.25
+       Model |  .008651414         1  .008651414   Prob > F        =    0.6185
+    Residual |   10.479432       301  .034815389   R-squared       =    0.0008
+-------------+----------------------------------   Adj R-squared   =   -0.0025
+       Total |  10.4880835       302  .034728753   Root MSE        =    .18659
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          hc |  -.0243039   .0487549    -0.50   0.619    -.1202474    .0716396
+       _cons |  -.1400405   .0116784   -11.99   0.000    -.1630222   -.1170588
+------------------------------------------------------------------------------
+
+. local b77 : di %4.2f _b[hc]
+
+. reg r hc if year == 1978
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(1, 301)       =      0.25
+       Model |  .008651412         1  .008651412   Prob > F        =    0.6185
+    Residual |  10.4794322       301   .03481539   R-squared       =    0.0008
+-------------+----------------------------------   Adj R-squared   =   -0.0025
+       Total |  10.4880837       302  .034728754   Root MSE        =    .18659
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          hc |  -.0243039   .0487549    -0.50   0.619    -.1202474    .0716396
+       _cons |   .1808963   .0286551     6.31   0.000     .1245065     .237286
+------------------------------------------------------------------------------
+
+. local b78 : di %4.2f _b[hc]
+
+. reg r hc
+
+      Source |       SS           df       MS      Number of obs   =       606
+-------------+----------------------------------   F(1, 604)       =    146.97
+       Model |  6.95444277         1  6.95444277   Prob > F        =    0.0000
+    Residual |  28.5808744       604  .047319328   R-squared       =    0.1957
+-------------+----------------------------------   Adj R-squared   =    0.1944
+       Total |  35.5353171       605  .058736061   Root MSE        =    .21753
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          hc |   .3405316   .0280896    12.12   0.000     .2853664    .3956967
+       _cons |  -.0963442   .0126062    -7.64   0.000    -.1211014    -.071587
+------------------------------------------------------------------------------
+
+. local bpool : di %4.2f _b[hc]
+
+. reg r hc i.year
+
+      Source |       SS           df       MS      Number of obs   =       606
+-------------+----------------------------------   F(2, 603)       =    209.69
+       Model |  14.5764528         2  7.28822642   Prob > F        =    0.0000
+    Residual |  20.9588643       603  .034757652   R-squared       =    0.4102
+-------------+----------------------------------   Adj R-squared   =    0.4082
+       Total |  35.5353171       605  .058736061   Root MSE        =    .18643
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          hc |  -.0243039   .0344463    -0.71   0.481    -.0919532    .0433454
+             |
+        year |
+       1978  |   .3209367   .0216725    14.81   0.000     .2783739    .3634996
+             |
+       _cons |  -.1400405   .0111998   -12.50   0.000    -.1620358   -.1180451
+------------------------------------------------------------------------------
+
+. local bfe : di %4.2f _b[hc]
+
+. di "Module 4, panel (b): 1977 = `b77', 1978 = `b78', pooled = `bpool', pooled
+>  with year effects = `bfe'"
+Module 4, panel (b): 1977 = -0.02, 1978 = -0.02, pooled = 0.34, pooled with yea
+> r effects = -0.02
+
+. 
+. twoway (scatter r hc if year == 1977, mcolor(navy%40) msize(small))        //
+> /
+>        (scatter r hc if year == 1978, mcolor(maroon%40) msize(small))      //
+> /
+>        (lfit r hc if year == 1977, lcolor(navy) lwidth(thick))             //
+> /
+>        (lfit r hc if year == 1978, lcolor(maroon) lwidth(thick))           //
+> /
+>        (lfit r hc, lcolor(black) lwidth(thick) lpattern(dash)),            //
+> /
+>     text(-0.76 -0.55 "1977: slope `b77'", color(navy) size(medsmall) placemen
+> t(e))  ///
+>     text(-0.76 0.55 "1978: slope `b78'", color(maroon) size(medsmall) placeme
+> nt(e)) ///
+>     text(0.68 -0.55 "pooled: slope `bpool'", color(black) size(medsmall) plac
+> ement(e)) ///
+>     xtitle("HC (percentage change)") ytitle("Return")                       /
+> //
+>     xlabel(-0.5(0.5)1.5, format(%3.1f)) ylabel(-0.6(0.3)0.6, angle(horizontal
+> ) format(%3.1f)) ///
+>     yscale(range(-0.8 0.78))                                                /
+> //
+>     title("(b) Zero year slopes, positive pooled slope")                    /
+> //
+>     legend(off) scheme(s1color) name(g_b, replace) nodraw
+
+. 
+. graph combine g_a g_b, rows(1) xsize(10) ysize(4.4)                          
+> ///
+>     title("Agreement between year and pooled slopes is not evidence")        
+> ///
+>     subtitle("Simulated cross-sections, 303 firms per year")                 
+> ///
+>     scheme(s1color)
+
+. graph export figures/fig4_simpson.png, replace width(2000)
+(file figures/fig4_simpson.png not found)
+file figures/fig4_simpson.png written in PNG format
+
+. 
+. di _n "Done. Figures written to figures/."
+
+Done. Figures written to figures/.
+
+. 
+end of do-file
+
+. log close
+      name:  <unnamed>
+       log:  /Users/sbb151/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUn
+> iversity/ACCTG 597A/acctg597a-research-design/week03-bgl-two-stage/bgl_two_st
+> age.log
+  log type:  text
+ closed on:   9 Sep 2026, 00:30:29
+-------------------------------------------------------------------------------
