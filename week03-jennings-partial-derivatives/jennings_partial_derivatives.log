@@ -1,0 +1,942 @@
+-------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/sbb151/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUn
+> iversity/ACCTG 597A/acctg597a-research-design/week03-jennings-partial-derivat
+> ives/jennings_partial_derivatives.log
+  log type:  text
+ opened on:   9 Sep 2026, 01:53:38
+
+. 
+. 
+. *****************************************************************************
+> ***
+. * MODULE 1: Jennings identity, eq. (2) versus eq. (3)
+. *****************************************************************************
+> ***
+. clear all
+
+. set seed 1990
+
+. 
+. set obs 1000
+Number of observations (_N) was 0, now 1,000.
+
+. gen cfo = 0.15*rnormal()
+
+. gen ta  = -0.4*cfo + 0.09*rnormal()
+
+. gen inc = cfo + ta
+
+. gen e   = 0.20*rnormal()
+
+. gen ret1 = 0.30*cfo + 0.30*ta + e
+
+. gen ret2 = 0.45*cfo + 0.15*ta + e
+
+. 
+. corr cfo ta
+(obs=1,000)
+
+             |      cfo       ta
+-------------+------------------
+         cfo |   1.0000
+          ta |  -0.5596   1.0000
+
+
+. 
+. foreach k in 1 2 {
+  2.     * ---- eq. (2): components ----
+.     reg ret`k' cfo ta
+  3.     scalar th1_`k'  = _b[cfo]
+  4.     scalar th1t_`k' = _b[cfo]/_se[cfo]
+  5.     scalar th2_`k'  = _b[ta]
+  6.     scalar th2t_`k' = _b[ta]/_se[ta]
+  7.     scalar r2a_`k'  = e(r2)
+  8.     test cfo = ta
+  9.     scalar Feq_`k'  = r(F)
+ 10.     * ---- eq. (3): component plus aggregate ----
+.     reg ret`k' cfo inc
+ 11.     scalar g1_`k'   = _b[cfo]
+ 12.     scalar g1t_`k'  = _b[cfo]/_se[cfo]
+ 13.     scalar g2_`k'   = _b[inc]
+ 14.     scalar g2t_`k'  = _b[inc]/_se[inc]
+ 15.     scalar r2b_`k'  = e(r2)
+ 16.     test cfo
+ 17.     scalar Fzero_`k' = r(F)
+ 18. 
+.     di _n "Economy `k' identity checks (should be zero to machine precision):
+> "
+ 19.     di "  gamma1 minus (theta1 - theta2) : " %10.6f (g1_`k' - (th1_`k' - t
+> h2_`k'))
+ 20.     di "  gamma2 minus theta2            : " %10.6f (g2_`k' - th2_`k')
+ 21.     di "  R2 eq.(2) minus R2 eq.(3)      : " %10.6f (r2a_`k' - r2b_`k')
+ 22.     di "  F(theta1 = theta2) minus F(gamma1 = 0) : " %10.6f (Feq_`k' - Fze
+> ro_`k')
+ 23. }
+
+      Source |       SS           df       MS      Number of obs   =     1,000
+-------------+----------------------------------   F(2, 997)       =     24.79
+       Model |   1.8862383         2  .943119149   Prob > F        =    0.0000
+    Residual |  37.9345445       997  .038048691   R-squared       =    0.0474
+-------------+----------------------------------   Adj R-squared   =    0.0455
+       Total |  39.8207828       999  .039860643   Root MSE        =    .19506
+
+------------------------------------------------------------------------------
+        ret1 | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         cfo |   .3413635   .0506195     6.74   0.000     .2420305    .4406965
+          ta |   .3685055   .0676021     5.45   0.000     .2358468    .5011641
+       _cons |   .0134321   .0061734     2.18   0.030     .0013177    .0255466
+------------------------------------------------------------------------------
+
+ ( 1)  cfo - ta = 0
+
+       F(  1,   997) =    0.22
+            Prob > F =    0.6368
+
+      Source |       SS           df       MS      Number of obs   =     1,000
+-------------+----------------------------------   F(2, 997)       =     24.79
+       Model |  1.88623829         2  .943119145   Prob > F        =    0.0000
+    Residual |  37.9345445       997  .038048691   R-squared       =    0.0474
+-------------+----------------------------------   Adj R-squared   =    0.0455
+       Total |  39.8207828       999  .039860643   Root MSE        =    .19506
+
+------------------------------------------------------------------------------
+        ret1 | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         cfo |  -.0271419   .0574685    -0.47   0.637     -.139915    .0856312
+         inc |   .3685055   .0676021     5.45   0.000     .2358468    .5011641
+       _cons |   .0134321   .0061734     2.18   0.030     .0013177    .0255466
+------------------------------------------------------------------------------
+
+ ( 1)  cfo = 0
+
+       F(  1,   997) =    0.22
+            Prob > F =    0.6368
+
+Economy 1 identity checks (should be zero to machine precision):
+  gamma1 minus (theta1 - theta2) :   0.000000
+  gamma2 minus theta2            :  -0.000000
+  R2 eq.(2) minus R2 eq.(3)      :   0.000000
+  F(theta1 = theta2) minus F(gamma1 = 0) :   0.000000
+
+      Source |       SS           df       MS      Number of obs   =     1,000
+-------------+----------------------------------   F(2, 997)       =     50.63
+       Model |  3.85318321         2  1.92659161   Prob > F        =    0.0000
+    Residual |  37.9345444       997   .03804869   R-squared       =    0.0922
+-------------+----------------------------------   Adj R-squared   =    0.0904
+       Total |  41.7877276       999  .041829557   Root MSE        =    .19506
+
+------------------------------------------------------------------------------
+        ret2 | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         cfo |   .4913635   .0506195     9.71   0.000     .3920305    .5906965
+          ta |   .2185055   .0676021     3.23   0.001     .0858468    .3511641
+       _cons |   .0134321   .0061734     2.18   0.030     .0013177    .0255466
+------------------------------------------------------------------------------
+
+ ( 1)  cfo - ta = 0
+
+       F(  1,   997) =   22.54
+            Prob > F =    0.0000
+
+      Source |       SS           df       MS      Number of obs   =     1,000
+-------------+----------------------------------   F(2, 997)       =     50.63
+       Model |  3.85318321         2   1.9265916   Prob > F        =    0.0000
+    Residual |  37.9345444       997   .03804869   R-squared       =    0.0922
+-------------+----------------------------------   Adj R-squared   =    0.0904
+       Total |  41.7877276       999  .041829557   Root MSE        =    .19506
+
+------------------------------------------------------------------------------
+        ret2 | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         cfo |   .2728581   .0574685     4.75   0.000      .160085    .3856312
+         inc |   .2185055   .0676021     3.23   0.001     .0858468    .3511641
+       _cons |   .0134321   .0061734     2.18   0.030     .0013177    .0255466
+------------------------------------------------------------------------------
+
+ ( 1)  cfo = 0
+
+       F(  1,   997) =   22.54
+            Prob > F =    0.0000
+
+Economy 2 identity checks (should be zero to machine precision):
+  gamma1 minus (theta1 - theta2) :   0.000000
+  gamma2 minus theta2            :  -0.000000
+  R2 eq.(2) minus R2 eq.(3)      :   0.000000
+  F(theta1 = theta2) minus F(gamma1 = 0) :  -0.000000
+
+. 
+. * ---- Write the booktabs fragment ----
+. foreach s in th1 th1t th2 th2t g1 g1t g2 g2t {
+  2.     foreach k in 1 2 {
+  3.         if substr("`s'", -1, 1) == "t" {
+  4.             local f`s'_`k' : di %4.1f `s'_`k'
+  5.         }
+  6.         else {
+  7.             local f`s'_`k' : di %5.2f `s'_`k'
+  8.         }
+  9.         local f`s'_`k' = strtrim("`f`s'_`k''")
+ 10.     }
+ 11. }
+
+. local fr2_1 : di %4.2f r2a_1
+
+. local fr2_1 = strtrim("`fr2_1'")
+
+. local fr2_2 : di %4.2f r2a_2
+
+. local fr2_2 = strtrim("`fr2_2'")
+
+. 
+. file open tab using tables/tab_reparam.tex, write replace
+(file tables/tab_reparam.tex not found)
+
+. file write tab "\begin{tabular}{@{}lcccc@{}}" _n
+
+. file write tab "\toprule" _n
+
+. file write tab " & \multicolumn{2}{c}{Economy 1: \$\theta_1 = \theta_2 = 0.30
+> \$} & \multicolumn{2}{c}{Economy 2: \$\theta_1 = 0.45,\ \theta_2 = 0.15\$} \\
+> " _n
+
+. file write tab "\cmidrule(lr){2-3}\cmidrule(lr){4-5}" _n
+
+. file write tab " & Eq. (2) & Eq. (3) & Eq. (2) & Eq. (3) \\" _n
+
+. file write tab "\midrule" _n
+
+. file write tab "CFO & `fth1_1' (`fth1t_1') & \textcolor{Maroon}{\bfseries `fg
+> 1_1' (`fg1t_1')} & `fth1_2' (`fth1t_2') & \textcolor{Maroon}{\bfseries `fg1_2
+> ' (`fg1t_2')} \\" _n
+
+. file write tab "TA  & `fth2_1' (`fth2t_1') & & `fth2_2' (`fth2t_2') & \\" _n
+
+. file write tab "INC & & \textcolor{DeepNavy}{\bfseries `fg2_1' (`fg2t_1')} & 
+> & \textcolor{DeepNavy}{\bfseries `fg2_2' (`fg2t_2')} \\" _n
+
+. file write tab "\midrule" _n
+
+. file write tab "\$R^2\$ & `fr2_1' & `fr2_1' & `fr2_2' & `fr2_2' \\" _n
+
+. file write tab "\bottomrule" _n
+
+. file write tab "\end{tabular}" _n
+
+. file close tab
+
+. 
+. type tables/tab_reparam.tex
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+ & \multicolumn{2}{c}{Economy 1: $\theta_1 = \theta_2 = 0.30$} & \multicolumn{2
+> }{c}{Economy 2: $\theta_1 = 0.45,\ \theta_2 = 0.15$} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+ & Eq. (2) & Eq. (3) & Eq. (2) & Eq. (3) \\
+\midrule
+CFO & 0.34 (6.7) & \textcolor{Maroon}{\bfseries -0.03 (-0.5)} & 0.49 (9.7) & \t
+> extcolor{Maroon}{\bfseries 0.27 (4.7)} \\
+TA  & 0.37 (5.5) & & 0.22 (3.2) & \\
+INC & & \textcolor{DeepNavy}{\bfseries 0.37 (5.5)} & & \textcolor{DeepNavy}{\bf
+> series 0.22 (3.2)} \\
+\midrule
+$R^2$ & 0.05 & 0.05 & 0.09 & 0.09 \\
+\bottomrule
+\end{tabular}
+
+. di "Done: tables/tab_reparam.tex"
+Done: tables/tab_reparam.tex
+
+. 
+. *****************************************************************************
+> ***
+. * MODULE 2: interaction terms and mean centering
+. *****************************************************************************
+> ***
+. clear all
+
+. set seed 1990
+
+. 
+. set obs 1000
+Number of observations (_N) was 0, now 1,000.
+
+. gen size = 6 + 1.5*rnormal()
+
+. gen earn = 0.08*rnormal()
+
+. gen ret  = 0.02 - 0.60*earn + 0.01*size + 0.35*earn*size + 0.20*rnormal()
+
+. 
+. * ---- Uncentered regression ----
+. gen earn_size = earn*size
+
+. reg ret earn size earn_size
+
+      Source |       SS           df       MS      Number of obs   =     1,000
+-------------+----------------------------------   F(3, 996)       =    160.04
+       Model |  18.2814607         3  6.09382023   Prob > F        =    0.0000
+    Residual |  37.9243849       996  .038076692   R-squared       =    0.3253
+-------------+----------------------------------   Adj R-squared   =    0.3232
+       Total |  56.2058456       999  .056262108   Root MSE        =    .19513
+
+------------------------------------------------------------------------------
+         ret | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+        earn |  -.3572684   .3296141    -1.08   0.279    -1.004086    .2895494
+        size |   .0112025   .0042154     2.66   0.008     .0029303    .0194746
+   earn_size |   .3226529   .0529424     6.09   0.000     .2187616    .4265443
+       _cons |   .0261129   .0260337     1.00   0.316    -.0249743       .0772
+------------------------------------------------------------------------------
+
+. scalar b1  = _b[earn]
+
+. scalar b1t = _b[earn]/_se[earn]
+
+. scalar b3  = _b[earn_size]
+
+. matrix V = e(V)
+
+. scalar v11 = V[1,1]
+
+. scalar v33 = V[3,3]
+
+. scalar v13 = V[1,3]
+
+. 
+. * ---- Mean-centered regression ----
+. sum size
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+        size |      1,000    6.001782    1.471065   1.504908   11.16433
+
+. scalar sbar = r(mean)
+
+. gen size_c = size - sbar
+
+. sum earn
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+        earn |      1,000    .0032877    .0811855   -.242613    .268396
+
+. gen earn_c = earn - r(mean)
+
+. gen earn_size_c = earn_c*size_c
+
+. reg ret earn_c size_c earn_size_c
+
+      Source |       SS           df       MS      Number of obs   =     1,000
+-------------+----------------------------------   F(3, 996)       =    160.04
+       Model |  18.2814606         3  6.09382021   Prob > F        =    0.0000
+    Residual |  37.9243849       996  .038076692   R-squared       =    0.3253
+-------------+----------------------------------   Adj R-squared   =    0.3232
+       Total |  56.2058456       999  .056262108   Root MSE        =    .19513
+
+------------------------------------------------------------------------------
+         ret | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+      earn_c |   1.579224    .076138    20.74   0.000     1.429815    1.728634
+      size_c |   .0122633   .0042345     2.90   0.004     .0039537    .0205728
+ earn_size_c |   .3226529   .0529424     6.09   0.000     .2187616    .4265443
+       _cons |   .0985396   .0061737    15.96   0.000     .0864247    .1106545
+------------------------------------------------------------------------------
+
+. scalar b1c  = _b[earn_c]
+
+. scalar b1ct = _b[earn_c]/_se[earn_c]
+
+. scalar b3c  = _b[earn_size_c]
+
+. 
+. di _n "Uncentered beta1 = " %6.3f b1 " (t = " %5.2f b1t "); beta3 = " %6.3f b
+> 3
+
+Uncentered beta1 = -0.357 (t = -1.08); beta3 =  0.323
+
+. di "Centered beta1   = " %6.3f b1c " (t = " %5.2f b1ct "); beta3 = " %6.3f b3
+> c
+Centered beta1   =  1.579 (t = 20.74); beta3 =  0.323
+
+. di "Check: b1 + b3*mean(size) - b1c = " %10.6f (b1 + b3*sbar - b1c)
+Check: b1 + b3*mean(size) - b1c =   0.000000
+
+. di "Check: b3 - b3c                  = " %10.6f (b3 - b3c)
+Check: b3 - b3c                  =  -0.000000
+
+. 
+. * ---- Marginal effect line and 95 percent band over Size = 0 to 10 ----
+. _pctile size, p(2.5 97.5)
+
+. scalar slo = r(r1)
+
+. scalar shi = r(r2)
+
+. 
+. clear
+
+. set obs 101
+Number of observations (_N) was 0, now 101.
+
+. gen s   = (_n - 1)/10
+
+. gen me  = b1 + b3*s
+
+. gen se  = sqrt(v11 + s^2*v33 + 2*s*v13)
+
+. gen lo  = me - 1.96*se
+
+. gen hi  = me + 1.96*se
+
+. gen inband = (s >= slo & s <= shi)
+
+. 
+. local fb1  : di %4.2f b1
+
+. local fb1t : di %4.1f b1t
+
+. local fb1c : di %4.2f b1c
+
+. local fb1ct: di %4.1f b1ct
+
+. local fsbar: di %3.1f sbar
+
+. local ys0 = b1
+
+. local ysc = b1c
+
+. 
+. twoway (rarea lo hi s if inband, color(navy%15) lwidth(none))                
+>  ///
+>        (rarea lo hi s if !inband & s < sbar, color(gs14%40) lwidth(none))    
+>  ///
+>        (rarea lo hi s if !inband & s > sbar, color(gs14%40) lwidth(none))    
+>  ///
+>        (line me s, lcolor(navy) lwidth(thick))                               
+>  ///
+>        (scatteri `ys0' 0, mcolor(maroon) msymbol(circle) msize(large))       
+> ///
+>        (scatteri `ysc' `=sbar', mcolor(navy) msymbol(circle) msize(large)),  
+> ///
+>     yline(0, lcolor(gs8) lpattern(dash))                                     
+> ///
+>     xline(`=slo', lcolor(gs10) lpattern(shortdash))                          
+> ///
+>     xline(`=shi', lcolor(gs10) lpattern(shortdash))                          
+> ///
+>     text(`=b1-0.6' 0.1 "uncentered {&beta}{sub:1} = `fb1'" "(t = `fb1t')" "th
+> e response at Size = 0", color(maroon) size(medium) placement(e) justificatio
+> n(left)) ///
+>     text(`=b1c+0.75' `=sbar-0.3' "centered {&beta}{sub:1} = `fb1c' (t = `fb1c
+> t')" "the response at mean Size = `fsbar'", color(navy) size(medlarge) placem
+> ent(w) justification(right)) ///
+>     text(-1.25 `=slo+0.15' "observed Size support (2.5th to 97.5th percentile
+> )", color(gs6) size(medium) placement(e)) ///
+>     xtitle("Size (log market value)") ytitle("Earnings response: {&beta}{sub:
+> 1} + {&beta}{sub:3} Size") ///
+>     xlabel(0(2)10) ylabel(-1(1)3, angle(horizontal) format(%2.0f))           
+>  ///
+>     yscale(range(-1.4 3.2))                                                  
+> ///
+>     title("The earnings response depends on where the derivative is evaluated
+> ") ///
+>     subtitle("Simulated data (seed 1990), N = 1,000; band is a 95 percent con
+> fidence interval") ///
+>     legend(off) scheme(s1color) xsize(9) ysize(5)
+
+. graph export figures/fig1_interaction.png, replace width(2000)
+(file figures/fig1_interaction.png not found)
+file figures/fig1_interaction.png written in PNG format
+
+. 
+. di "Done: figures/fig1_interaction.png"
+Done: figures/fig1_interaction.png
+
+. 
+. *****************************************************************************
+> ***
+. * MODULE 3: Ohlson levels regression under clean surplus
+. *****************************************************************************
+> ***
+. clear all
+
+. set seed 1995
+
+. 
+. set obs 1000
+Number of observations (_N) was 0, now 1,000.
+
+. gen bv0 = 20 + 5*rnormal()
+
+. gen e   = 0.10*bv0 + 1.5*rnormal()
+
+. gen div = 0.4*e + 0.5*rnormal()
+
+. gen bv1 = bv0 + e - div
+
+. gen mv  = 2 + 5.0*e + 0.8*bv1 + 3*rnormal()
+
+. 
+. * ---- (1) MV on E and closing book value ----
+. reg mv e bv1
+
+      Source |       SS           df       MS      Number of obs   =     1,000
+-------------+----------------------------------   F(2, 997)       =   6480.78
+       Model |  115594.224         2  57797.1119   Prob > F        =    0.0000
+    Residual |   8891.4794       997   8.9182341   R-squared       =    0.9286
+-------------+----------------------------------   Adj R-squared   =    0.9284
+       Total |  124485.703       999  124.610314   Root MSE        =    2.9863
+
+------------------------------------------------------------------------------
+          mv | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           e |   4.967952    .067474    73.63   0.000     4.835545    5.100359
+         bv1 |   .8017449   .0196914    40.72   0.000     .7631036    .8403861
+       _cons |   2.018908   .3841406     5.26   0.000     1.265091    2.772725
+------------------------------------------------------------------------------
+
+. scalar a1   = _b[e]
+
+. scalar a1t  = _b[e]/_se[e]
+
+. scalar a2   = _b[bv1]
+
+. scalar a2t  = _b[bv1]/_se[bv1]
+
+. scalar r2_1 = e(r2)
+
+. lincom e + bv1
+
+ ( 1)  e + bv1 = 0
+
+------------------------------------------------------------------------------
+          mv | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         (1) |   5.769697    .060517    95.34   0.000     5.650942    5.888452
+------------------------------------------------------------------------------
+
+. scalar tot  = r(estimate)
+
+. scalar tott = r(estimate)/r(se)
+
+. 
+. * ---- (2) MV on E and K = BV_t-1 - Div (= BV_t - E) ----
+. gen k = bv0 - div
+
+. reg mv e k
+
+      Source |       SS           df       MS      Number of obs   =     1,000
+-------------+----------------------------------   F(2, 997)       =   6480.78
+       Model |  115594.224         2   57797.112   Prob > F        =    0.0000
+    Residual |  8891.47934       997  8.91823404   R-squared       =    0.9286
+-------------+----------------------------------   Adj R-squared   =    0.9284
+       Total |  124485.703       999  124.610314   Root MSE        =    2.9863
+
+------------------------------------------------------------------------------
+          mv | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           e |   5.769697    .060517    95.34   0.000     5.650942    5.888452
+           k |   .8017449   .0196914    40.72   0.000     .7631036    .8403861
+       _cons |   2.018908   .3841406     5.26   0.000     1.265091    2.772725
+------------------------------------------------------------------------------
+
+. scalar c1   = _b[e]
+
+. scalar c1t  = _b[e]/_se[e]
+
+. scalar c2   = _b[k]
+
+. scalar c2t  = _b[k]/_se[k]
+
+. scalar r2_2 = e(r2)
+
+. 
+. di _n "Identity checks (should be zero to machine precision):"
+
+Identity checks (should be zero to machine precision):
+
+. di "  coef on E in (2) minus (alpha1 + alpha2) : " %10.6f (c1 - (a1 + a2))
+  coef on E in (2) minus (alpha1 + alpha2) :   0.000000
+
+. di "  t on E in (2) minus lincom t             : " %10.6f (c1t - tott)
+  t on E in (2) minus lincom t             :   0.000000
+
+. di "  coef on K in (2) minus alpha2            : " %10.6f (c2 - a2)
+  coef on K in (2) minus alpha2            :   0.000000
+
+. di "  R2 (1) minus R2 (2)                      : " %10.6f (r2_1 - r2_2)
+  R2 (1) minus R2 (2)                      :  -0.000000
+
+. 
+. * ---- Write the booktabs fragment ----
+. local fa1  : di %4.2f a1
+
+. local fa1 = strtrim("`fa1'")
+
+. local fa1t : di %4.1f a1t
+
+. local fa1t = strtrim("`fa1t'")
+
+. local fa2  : di %4.2f a2
+
+. local fa2 = strtrim("`fa2'")
+
+. local fa2t : di %4.1f a2t
+
+. local fa2t = strtrim("`fa2t'")
+
+. local fc1  : di %4.2f c1
+
+. local fc1 = strtrim("`fc1'")
+
+. local fc1t : di %4.1f c1t
+
+. local fc1t = strtrim("`fc1t'")
+
+. local fc2  : di %4.2f c2
+
+. local fc2 = strtrim("`fc2'")
+
+. local fc2t : di %4.1f c2t
+
+. local fc2t = strtrim("`fc2t'")
+
+. local fr1  : di %4.2f r2_1
+
+. local fr1 = strtrim("`fr1'")
+
+. local fr2  : di %4.2f r2_2
+
+. local fr2 = strtrim("`fr2'")
+
+. 
+. file open tab using tables/tab_ohlson.tex, write replace
+(file tables/tab_ohlson.tex not found)
+
+. file write tab "\begin{tabular}{@{}lcc@{}}" _n
+
+. file write tab "\toprule" _n
+
+. file write tab " & (1) & (2) \\" _n
+
+. file write tab " & \$MV\$ on \$E\$, \$BV_t\$ & \$MV\$ on \$E\$, \$K\$ \\" _n
+
+. file write tab "\midrule" _n
+
+. file write tab "\$E\$ & \textcolor{Maroon}{\bfseries `fa1' (`fa1t')} & \textc
+> olor{DeepNavy}{\bfseries `fc1' (`fc1t')} \\" _n
+
+. file write tab "\$BV_t\$ & `fa2' (`fa2t') & \\" _n
+
+. file write tab "\$K = BV_{t-1} - Div\$ & & `fc2' (`fc2t') \\" _n
+
+. file write tab "\midrule" _n
+
+. file write tab "\$R^2\$ & `fr1' & `fr2' \\" _n
+
+. file write tab "\bottomrule" _n
+
+. file write tab "\end{tabular}" _n
+
+. file close tab
+
+. 
+. type tables/tab_ohlson.tex
+\begin{tabular}{@{}lcc@{}}
+\toprule
+ & (1) & (2) \\
+ & $MV$ on $E$, $BV_t$ & $MV$ on $E$, $K$ \\
+\midrule
+$E$ & \textcolor{Maroon}{\bfseries 4.97 (73.6)} & \textcolor{DeepNavy}{\bfserie
+> s 5.77 (95.3)} \\
+$BV_t$ & 0.80 (40.7) & \\
+$K = BV_{t-1} - Div$ & & 0.80 (40.7) \\
+\midrule
+$R^2$ & 0.93 & 0.93 \\
+\bottomrule
+\end{tabular}
+
+. di "Done: tables/tab_ohlson.tex"
+Done: tables/tab_ohlson.tex
+
+. 
+. *****************************************************************************
+> ***
+. * MODULE 4: BGL Panel (A) as a directional derivative
+. *****************************************************************************
+> ***
+. clear all
+
+. set seed 228
+
+. 
+. set obs 303
+Number of observations (_N) was 0, now 303.
+
+. gen hc  = 0.134 + 0.216*rnormal()
+
+. gen pre = 0.148 + 1.46*(hc - 0.134) + 0.206*rnormal()
+
+. gen r   = 0.018 + 0.39*(hc - 0.134) - 0.02*(pre - 0.148) + 0.19*rnormal()
+
+. 
+. * ---- First stage (Panel (A)) ----
+. reg pre hc
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(1, 301)       =    690.53
+       Model |  30.2306352         1  30.2306352   Prob > F        =    0.0000
+    Residual |  13.1775263       301  .043779157   R-squared       =    0.6964
+-------------+----------------------------------   Adj R-squared   =    0.6954
+       Total |  43.4081615       302  .143735634   Root MSE        =    .20923
+
+------------------------------------------------------------------------------
+         pre | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          hc |    1.50025   .0570918    26.28   0.000     1.387901      1.6126
+       _cons |  -.0494494   .0141335    -3.50   0.001    -.0772623   -.0216365
+------------------------------------------------------------------------------
+
+. scalar c = _b[hc]
+
+. predict zA, resid
+
+. 
+. * ---- One regression and the three directional derivatives ----
+. reg r hc pre
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(2, 300)       =     25.08
+       Model |  1.93929991         2  .969649953   Prob > F        =    0.0000
+    Residual |  11.5998374       300  .038666125   R-squared       =    0.1432
+-------------+----------------------------------   Adj R-squared   =    0.1375
+       Total |  13.5391374       302  .044831581   Root MSE        =    .19664
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          hc |   .4161324    .097381     4.27   0.000     .2244961    .6077687
+         pre |  -.0246186   .0541687    -0.45   0.650    -.1312173    .0819801
+       _cons |  -.0192579   .0135499    -1.42   0.156    -.0459228     .007407
+------------------------------------------------------------------------------
+
+. scalar b1 = _b[hc]
+
+. scalar b2 = _b[pre]
+
+. lincom hc
+
+ ( 1)  hc = 0
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         (1) |   .4161324    .097381     4.27   0.000     .2244961    .6077687
+------------------------------------------------------------------------------
+
+. scalar d_pre  = r(estimate)
+
+. scalar d_pret = r(estimate)/r(se)
+
+. lincom hc + pre
+
+ ( 1)  hc + pre = 0
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         (1) |   .3915138    .060109     6.51   0.000     .2732251    .5098025
+------------------------------------------------------------------------------
+
+. scalar d_D    = r(estimate)
+
+. scalar d_Dt   = r(estimate)/r(se)
+
+. lincom hc + `=c'*pre
+
+ ( 1)  hc + 1.50025*pre = 0
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         (1) |   .3791984   .0536544     7.07   0.000     .2736117     .484785
+------------------------------------------------------------------------------
+
+. scalar d_Z    = r(estimate)
+
+. scalar d_Zt   = r(estimate)/r(se)
+
+. 
+. * ---- Cross-checks against the alternative parameterizations ----
+. reg r hc zA
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(2, 300)       =     25.08
+       Model |  1.93929991         2  .969649953   Prob > F        =    0.0000
+    Residual |  11.5998374       300  .038666125   R-squared       =    0.1432
+-------------+----------------------------------   Adj R-squared   =    0.1375
+       Total |  13.5391374       302  .044831581   Root MSE        =    .19664
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          hc |   .3791984   .0536544     7.07   0.000     .2736117     .484785
+          zA |  -.0246186   .0541687    -0.45   0.650    -.1312173    .0819802
+       _cons |  -.0180405   .0132825    -1.36   0.175    -.0441792    .0080982
+------------------------------------------------------------------------------
+
+. scalar A_hc  = _b[hc]
+
+. scalar A_hct = _b[hc]/_se[hc]
+
+. gen d = pre - hc
+
+. reg r hc d
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(2, 300)       =     25.08
+       Model |  1.93929991         2  .969649953   Prob > F        =    0.0000
+    Residual |  11.5998374       300  .038666125   R-squared       =    0.1432
+-------------+----------------------------------   Adj R-squared   =    0.1375
+       Total |  13.5391374       302  .044831581   Root MSE        =    .19664
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          hc |   .3915138    .060109     6.51   0.000     .2732251    .5098025
+           d |  -.0246186   .0541687    -0.45   0.650    -.1312173    .0819801
+       _cons |  -.0192579   .0135499    -1.42   0.156    -.0459228     .007407
+------------------------------------------------------------------------------
+
+. scalar I_hc  = _b[hc]
+
+. scalar I_hct = _b[hc]/_se[hc]
+
+. reg r hc
+
+      Source |       SS           df       MS      Number of obs   =       303
+-------------+----------------------------------   F(1, 301)       =     50.08
+       Model |  1.93131334         1  1.93131334   Prob > F        =    0.0000
+    Residual |   11.607824       301  .038564199   R-squared       =    0.1426
+-------------+----------------------------------   Adj R-squared   =    0.1398
+       Total |  13.5391374       302  .044831581   Root MSE        =    .19638
+
+------------------------------------------------------------------------------
+           r | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          hc |   .3791984   .0535836     7.08   0.000     .2737524    .4846444
+       _cons |  -.0180405    .013265    -1.36   0.175    -.0441444    .0080633
+------------------------------------------------------------------------------
+
+. scalar biv_hc = _b[hc]
+
+. 
+. di _n "Identity checks (should be zero to machine precision):"
+
+Identity checks (should be zero to machine precision):
+
+. di "  lincom(hc + c*pre) minus Panel (A) HC coef : " %10.6f (d_Z - A_hc)
+  lincom(hc + c*pre) minus Panel (A) HC coef :  -0.000000
+
+. di "  its t minus Panel (A) HC t                 : " %10.6f (d_Zt - A_hct)
+  its t minus Panel (A) HC t                 :  -0.000000
+
+. di "  Panel (A) HC coef minus bivariate slope    : " %10.6f (A_hc - biv_hc)
+  Panel (A) HC coef minus bivariate slope    :   0.000000
+
+. di "  lincom(hc + pre) minus coef on HC given D  : " %10.6f (d_D - I_hc)
+  lincom(hc + pre) minus coef on HC given D  :  -0.000000
+
+. di "  its t minus t on HC given D                : " %10.6f (d_Dt - I_hct)
+  its t minus t on HC given D                :  -0.000000
+
+. di "  first-stage slope c = " %6.3f c
+  first-stage slope c =  1.500
+
+. 
+. * ---- Write the booktabs fragment ----
+. local fpre  : di %4.2f d_pre
+
+. local fpre = strtrim("`fpre'")
+
+. local fpret : di %4.1f d_pret
+
+. local fpret = strtrim("`fpret'")
+
+. local fD    : di %4.2f d_D
+
+. local fD = strtrim("`fD'")
+
+. local fDt   : di %4.1f d_Dt
+
+. local fDt = strtrim("`fDt'")
+
+. local fZ    : di %4.2f d_Z
+
+. local fZ = strtrim("`fZ'")
+
+. local fZt   : di %4.1f d_Zt
+
+. local fZt = strtrim("`fZt'")
+
+. local fc    : di %4.2f c
+
+. local fc = strtrim("`fc'")
+
+. 
+. file open tab using tables/tab_bgl.tex, write replace
+(file tables/tab_bgl.tex not found)
+
+. file write tab "\begin{tabular}{@{}llcc@{}}" _n
+
+. file write tab "\toprule" _n
+
+. file write tab "Held fixed & Derivative & Estimate (\$t\$) & Where it appears
+>  \\" _n
+
+. file write tab "\midrule" _n
+
+. file write tab "PRE & \$b_1\$ & \textcolor{Maroon}{\bfseries `fpre' (`fpret')
+> } & Panel (B) residual; one regression \\" _n
+
+. file write tab "\$D = \mathrm{PRE} - \mathrm{HC}\$ & \$b_1 + b_2\$ & `fD' (`f
+> Dt') & HC in \$R\$ on HC, \$D\$ \\" _n
+
+. file write tab "\$Z = \mathrm{PRE} - a - c\,\mathrm{HC}\$ & \$b_1 + c\,b_2\$,
+>  \$c = `fc'\$ & \textcolor{DeepNavy}{\bfseries `fZ' (`fZt')} & Panel (A) HC; 
+> bivariate slope \\" _n
+
+. file write tab "\bottomrule" _n
+
+. file write tab "\end{tabular}" _n
+
+. file close tab
+
+. 
+. type tables/tab_bgl.tex
+\begin{tabular}{@{}llcc@{}}
+\toprule
+Held fixed & Derivative & Estimate ($t$) & Where it appears \\
+\midrule
+PRE & $b_1$ & \textcolor{Maroon}{\bfseries 0.42 (4.3)} & Panel (B) residual; on
+> e regression \\
+$D = \mathrm{PRE} - \mathrm{HC}$ & $b_1 + b_2$ & 0.39 (6.5) & HC in $R$ on HC, 
+> $D$ \\
+$Z = \mathrm{PRE} - a - c\,\mathrm{HC}$ & $b_1 + c\,b_2$, $c = 1.50$ & \textcol
+> or{DeepNavy}{\bfseries 0.38 (7.1)} & Panel (A) HC; bivariate slope \\
+\bottomrule
+\end{tabular}
+
+. di "Done: tables/tab_bgl.tex"
+Done: tables/tab_bgl.tex
+
+. 
+. log close
+      name:  <unnamed>
+       log:  /Users/sbb151/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUn
+> iversity/ACCTG 597A/acctg597a-research-design/week03-jennings-partial-derivat
+> ives/jennings_partial_derivatives.log
+  log type:  text
+ closed on:   9 Sep 2026, 01:53:40
+-------------------------------------------------------------------------------
