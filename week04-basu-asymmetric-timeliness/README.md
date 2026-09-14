@@ -1,30 +1,31 @@
-# Week 4: The Basu (1997) Legacy — Spurious Asymmetric Timeliness
+# Week 4: Reversal and Truncation
 
-**Paper:** Basu (1997), "The Conservatism Principle and the Asymmetric Timeliness of Earnings," *Journal of Accounting and Economics* 24(1): 3–37.
+**Paper:** Basu (1997), "The Conservatism Principle and the Asymmetric Timeliness of Earnings," *Journal of Accounting and Economics* 24(1): 3-37, read with Dietrich, Muller, and Riedl (2007), "Asymmetric Timeliness Tests of Accounting Conservatism," *Review of Accounting Studies* 12(1): 95-124 (DMR).
 
-Companion to the Week 1 module (`week01-reverse-regression/`), which shows that the reverse regression of earnings on returns — introduced by Beaver, Lambert, and Morse (1980) and defended by Beaver, Lambert, and Ryan (1987) — recovers the forward coefficient only when R² = 1, and that grouping by the dependent variable is mechanically biased. Basu (1997), with 4,200+ citations, builds the conditional-conservatism literature on the same earnings-on-returns direction, adding a piecewise split on the sign of returns:
+## The design problem
 
-g = b₀ + b₁·D + b₂·G + b₃·(D·G) + e,  D = 1(G < 0),
+Basu (1997) measures conservatism by regressing price-deflated earnings on the contemporaneous annual return with an intercept and slope dummy for negative returns, a Beaver, Lambert, and Morse (1980) "reverse" regression chosen because "OLS standard errors and test statistics are better specified when the leading variable is specified as independent and the lagging variable as dependent" (p. 11). The interaction coefficient, read as conservatism when positive, is the difference between the slope estimated on the negative-return half of the sample and the slope estimated on the positive-return half. DMR (2007) show that in a world with no conservatism, where returns are R = X + eta with earnings X and non-earnings information eta uncorrelated, each half's slope equals the forward slope times a truncated variance ratio (the sample-variance-ratio, or SVR, bias, eq. 1.4) plus a truncated covariance term (the sample-truncation, or ST, bias, eqs. 1.7a-b): partitioning on the sign of R, which contains eta, makes cov(X, eta) negative in both halves. The difference between the two slopes is zero only under sufficient conditions (symmetric X, symmetric homoskedastic mean-zero eta, a split at the mean of R) that the descriptive statistics of the replication sample violate, and otherwise takes a sign and size set by moments of an unobservable (pp. 104-105, 111). A placebo return built from another firm's residual reproduces Basu's asymmetry (Table 2), and per-share deflation flips its sign (Table 3 Panel D).
 
-with b₃ > 0 read as conservatism (earnings timelier for bad news).
+The general principle: whenever the variable that forms the subsamples contains the error of the structural relation, subsample slopes differ from the full-sample slope by moments of that error, and the difference between two subsample slopes is not a parameter of the accounting process. A hypothesis test on that difference therefore has a null distribution that is not centered at zero.
 
-## The design flaw
+## The simulation modules
 
-The Basu regression inherits every pathology of the reverse regression, plus one of its own: it conditions on the sign of the regressor (returns), a variable correlated with the regression error. In a simulated world with **perfectly symmetric earnings timeliness** and right-skewed non-earnings return noise (limited liability; growth-option and discount-rate news produce occasional large positive returns unrelated to current earnings), negative returns are disproportionately news-driven while large positive returns are disproportionately noise-driven, so the reverse slope cov(g,G)/var(G) is steeper on the negative side. The Basu coefficient measures the variance composition of returns, not accounting.
+`basu_asymmetric_timeliness.do` (base Stata, about three minutes) runs five self-contained modules, all with beta = lambda = 1, cov(X, eta) = 0, and seed 1997, so the true asymmetric timeliness coefficient is zero by construction. Identity checks are printed in the log and should be zero to six decimals.
 
-**Results at N = 700 (1,000 Monte Carlo samples):** mean spurious b₃ = 0.21, mean t = 5.2, **100% rejection** of the true null. Placebo with symmetric non-earnings noise: 5.4% rejection, exactly nominal size — confirming the skewness of the return noise, not accounting behavior, drives the result.
+1. **Identity.** N = 50,000 with DMR Table 1 moments (sd(X) = 0.17, sd(eta) = 0.497); two designs, symmetric normal and right-skewed eta. Checks: the full-sample reverse slope equals the forward slope times var(X)/var(R) (eq. 1.4) and R2 equals the product of the two slopes (Basu fn. 7); each half's reverse slope equals b + SVR_j + ST_j exactly (DMR Table 2 Panels D-E); Basu's beta1 from the stacked regression equals delta_1 - delta_0 (fn. 14). Under symmetric normal data the two large bias terms offset and beta1 = -0.001; with right-skewed eta, beta1 = 0.480 (t = 95.6) with no conservatism. Output: `tables/tab_basu_identity.tex`.
+2. **Truncation geometry.** N = 4,000, X and eta independent standard normal. Splitting on the sign of R = X + eta gives cov(X, eta | R < 0) and cov(X, eta | R >= 0) of about -0.32 and -0.35 against a closed form of -1/pi = -0.318 and a full-sample value near zero. Output: `figures/fig1_basu_truncation.png`.
+3. **DMR Fig. 3 examples.** The three printed twelve-observation panels reproduce DMR's slopes to 0.001 (Panel A: full-sample 0.429, subsample 0.813 and 0.813; Panel B: 0.038 versus 1.917; Panel C: 0.281 versus 0.602), and the mirror of Panel C (X and eta negated) swaps the two halves exactly, giving -0.321. Outputs: `tables/tab_basu_dmr_a.tex`, `tables/tab_basu_dmr_bc.tex`.
+4. **DMR Table 2 recreated.** The placebo-return columns (bad 0.493 versus good 0.009 on returns built with no asymmetry, against 0.284 versus 0.025 on actual returns and Basu's 0.222 versus 0.061), with the full + SVR + ST arithmetic asserted. Output: `figures/fig3_basu_table2.png`.
+5. **Monte Carlo.** Eight designs, 1,000 samples of N = 2,000 each: (A) symmetric normal, split at the mean, mean beta1 = 0.001 with 6 percent rejection; (B) eta right-skewed, 0.482; (C) X left-skewed, 0.123; (D) X right-skewed, -0.120; (E) var(eta) rising in X, -0.256; (F) normal data split at zero with mean R = 0.16, 0.000 with 5 percent rejection (under joint normality E[X | R] is linear, so the split location alone does not bias the coefficient); (G) symmetric heavy-tailed (Laplace) data with the same off-mean split, -0.052 with 66 percent rejection; (H) DMR Table 1's shape (left-skewed X, right-skewed eta, split at zero), 0.821. Designs B to E and H reject the true null in 100 percent of samples. Outputs: `figures/fig2_basu_designs.png`, `tables/tab_basu_montecarlo.tex`.
 
-## Files
+## Legacy companion
 
-- `basu_spurious_timeliness.do` — self-contained simulation, base Stata only. Runtime ≈ 1 minute. Run from this folder: `do basu_spurious_timeliness.do`.
-- `figures/fig3_spurious_basu.png` — sampling distribution of the spurious b₃ (true b₃ = 0 in both worlds; the skewed-noise distribution never touches zero).
-- `figures/fig4_basu_piecewise.png` — the piecewise fit that "finds" conservatism in symmetric data.
-- `basu_spurious_timeliness.log` — full Stata log from the run that produced the committed figures.
+`basu_spurious_timeliness.do` (seed 597, with its log and `figures/fig3_spurious_basu.png`, `figures/fig4_basu_piecewise.png`) is the earlier Week 1 companion: a Monte Carlo in which right-skewed non-earnings return noise produces a mean spurious b3 of 0.21 with 100 percent rejection at N = 700, and a symmetric placebo gives nominal size. It is superseded by Module 5 above, which restates the same idea in DMR's notation, and is kept for reference.
 
 ## Key readings
 
-- Dietrich, Muller, and Riedl (2007, *RAST*), "Asymmetric Timeliness Tests of Accounting Conservatism" — the bridge to the econometrics critique (the only accounting paper citing both BLR 1987 and Goldberger 1984); simulation evidence of spurious asymmetric timeliness.
-- Givoly, Hayn, and Natarajan (2007, *TAR*); Patatoukas and Thomas (2011, 2016, *TAR*) — placebo evidence.
-- Ball, Kothari, and Nikolaev (2013, *TAR* and *JAR*) — the defense.
-- Collins, Hribar, and Tian (2014, *JAE*) — cash-flow asymmetry: much of the measured asymmetry cannot be accrual conservatism.
-- Dietrich, Muller, and Riedl (2023, *RAST*) — validity tests: designs built on asymmetric timeliness reject a true null far too often, and proposed fixes do not restore validity.
+- Basu (1997, *JAE*): the focal paper; introduces the sign-partitioned reverse regression and reports bad-news slopes two to six times the good-news slopes (Table 1 Panel A: 0.216 + 0.059 against 0.059).
+- Dietrich, Muller, and Riedl (2007, *RAST*): derives the SVR and ST biases, gives the sufficient conditions for an unbiased difference, and shows with placebo returns, no-news partitions, and per-share deflation that the asymmetry is a property of the design.
+- Beaver, Lambert, and Ryan (1987, *JAE*) and Goldberger (1984, *Journal of Human Resources*): the reverse regression recovers the forward coefficient only when R2 = 1 (Week 1 module `week01-reverse-regression/`).
+- Hausman and Wise (1977, *Econometrica*): sampling on a variable correlated with the error biases OLS; the source DMR cite for the ST term.
+- Ball, Kothari, and Nikolaev (2013, *JAR*): the defense of the coefficient under conditions close to DMR's (i) to (iii); Patatoukas and Thomas (2011, *TAR*) and Dietrich, Muller, and Riedl (2023, *RAST*): placebo and validity evidence against it.

@@ -1,0 +1,26 @@
+# Week 4: R-Squared as a Sample Statistic
+
+**Papers:** Brown, Lo, and Lys (1999), "Use of R² in Accounting Research: Measuring Changes in Value Relevance over the Last Four Decades," *Journal of Accounting and Economics* 28(2): 83-115; Gu (2007), "Across-Sample Incomparability of R²s and Additional Evidence on Value Relevance Changes Over Time," *Journal of Business Finance & Accounting* 34(7-8): 1073-1098.
+
+## The design problem
+
+The value-relevance literature of the 1990s measured the usefulness of accounting numbers by the R² of a regression of price on earnings and book value per share and read changes in that R² across years, countries, or regimes as changes in value relevance. Brown, Lo, and Lys (1999) showed that the R² of such a levels regression depends on the coefficient of variation of an unobserved scale factor, reversed the four-decade upward trend of Collins, Maydew, and Weiss (1997) by controlling for it, and concluded that "between-sample comparisons of R² are invalid, unless one controls for differences in the scale factor's coefficient of variation" (p. 83). Gu (2007) argued that the incomparability is more general than scale: "Even in the absence of scale and heteroscedasticity, the R2s are incomparable across samples" (p. 1074).
+
+The principle is an identity. With OLS residuals e and the decomposition of the total sum of squares, R² = β̂²σ̂²ₓ/(β̂²σ̂²ₓ + σ̂²ε): the slope and the residual variance estimate parameters of the economic relation, but σ̂²ₓ, the sample dispersion of the regressor, is a property of the sample that no theory restricts, so two samples that obey the same relation for every observation can carry any two R²s. Brown, Lo, and Lys' scale effect turns out to be the same mechanism: at α = 0 their probability limit reduces to β²V/(β²V + σ²ε) with V = σ²w + μ²w ω²s/(1 + ω²s), so scale enters R² only by widening the effective regressor. The comparable statistic is the residual variance, which ignores σ²ₓ but not scale, and Gu's Table 2 shows that pricing errors are not proportional to scale, so the scale control cannot be a proportional one.
+
+## The simulation modules
+
+`bll_r2_incomparability.do` (base Stata, under a minute) runs four self-contained modules. Identity checks are printed in the log and should be zero to six decimals or better.
+
+1. **Two samples, one relation.** Sample 1 draws x from N(2, 1) and sample 2 from N(2, 3); both use y = x + ε with ε ~ N(0, 1) and N = 100,000. The slope (1.00) and residual s.d. (1.00) agree across samples; R² is 0.50 in sample 1 and 0.75 in sample 2, matching the population values σ²ₓ/(σ²ₓ + 1). Checked: SST = β̂²Sₓₓ + SSE and the R² identity. Output: `tables/tab_twosample.tex`.
+2. **Three ways to move R².** From a baseline (σw = 1, ωs = 0, σε = 1, R² = 0.50): (a) widen w to σw = 1.73, (b) add a lognormal scale factor with unit mean and CV 1 to both y and x, (c) raise σε to 1.73. R² becomes 0.75, 0.75, and 0.25; the residual s.d. stays at 1.00 in (a) but rises to 1.41 in (b) and 1.73 in (c). R² cannot separate the sample property (a) from scale (b); the residual s.d. separates (a) from the changed relation (c) but confounds (b) with (c). Output: `tables/tab_three_sources.tex`.
+3. **R² against the CV of scale.** With z = α + w + ε and y = sz, x = sw, R² is computed on a grid of ωs from 0 to 2 (N = 400,000 per point) and drawn against BLL's Eq. (7). At α = 0 the curve rises from 0.50 toward 0.83, the uncentered R² of z on w, as Eq. (8') requires; at α = 12 it falls to about 0.38 near ωs = 0.15 and returns to 0.50 only at ωs ≈ 0.37 before rising toward 0.85, the non-monotone case the 2002 erratum could not rule out. Checked: Eq. (7) equals the V form at α = 0 to ten decimals; simulated R² within 0.02 of Eq. (7). Output: `figures/fig1_scale_sweep.png`.
+4. **Gu's Table 2 recreated.** Pricing error against mean absolute fitted price by scale decile, with the proportional ray through decile 3: decile 10 has 5.8 times the scale of decile 3 but 2.4 times the pricing error, so a proportional scale adjustment is descriptively invalid. Output: `figures/fig2_gu_table2.png`.
+
+## Key readings
+
+- Brown, Lo, and Lys (1999, *JAE*): the focal paper; derives plim R² as a function of the scale factor's coefficient of variation (Eq. (7)) and reverses the Collins, Maydew, and Weiss trend by controlling for it (Table 4) or deflating by lagged price (Table 5); a 2002 erratum (*JAE* 33: 141) withdraws the monotonicity argument for α > 0.
+- Gu (2007, *JBFA*): the critique; writes R² as β̂²σ̂²ₓ/(β̂²σ̂²ₓ + σ̂²ε) and shows that σ²ₓ is a sample property, proposes the residual variance with a nonlinear scale control as the comparable measure, and finds the BLL returns-model decline not robust to iterated outlier removal (fn. 16).
+- Collins, Maydew, and Weiss (1997, *JAE*): the design both papers re-examine; annual price-levels regressions over 1953-1993 with an increasing total R² read as increasing value relevance.
+- Goldberger (1991, *A Course in Econometrics*): the textbook source for the residual variance, rather than R², as the measure of fit that is comparable across samples.
+- Barth and Kallapur (1995, *CAR*): the same scale setup applied to coefficient bias rather than R²; BLL extend it and argue that deflation, not inclusion of a scale proxy, is the remedy when the object is R².

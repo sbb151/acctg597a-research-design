@@ -13,7 +13,7 @@ Every `.do` file is **self-contained**: it generates its own simulated data, so 
 | 3 | `week03-bgl-two-stage/` | The two-stage residual regression is one multiple regression read twice; orthogonalizing does not reduce collinearity; Simpson's paradox in pooled slopes | Beaver, Griffin, and Landsman (1982, *JAE*) |
 | 3 | `week03-callen-controls/` | Demeaning does not reduce interaction-term multicollinearity; controlling for a mediator (the credit rating) changes the estimand | Callen, Livnat, and Segal (2009, *TAR*) |
 | 3 | `week03-jennings-partial-derivatives/` | A coefficient is a partial derivative in a direction fixed by the other regressors; with linked regressors (an identity, clean surplus, a first stage, an interaction) the marginal effect is a linear combination of coefficients | Jennings (1990, *TAR*) |
-| 4 | `week04-basu-asymmetric-timeliness/` | Spurious asymmetric timeliness from the piecewise reverse regression | Basu (1997, *JAE*) |
+| 4 | `week04-basu-asymmetric-timeliness/` | The asymmetric timeliness coefficient is nonzero under no conservatism: reversing the returns-earnings regression adds a variance-ratio bias and partitioning on the sign of returns adds a truncation bias, of unknown sign and size (Dietrich, Muller, and Riedl 2007) | Basu (1997, *JAE*) |
 
 ## Lecture decks
 
@@ -32,6 +32,7 @@ Slides for the in-class research-design modules are posted under `decks/` as PDF
 | 3 | [`decks/week03/week3_bgl_two_stage.pdf`](decks/week03/week3_bgl_two_stage.pdf) | Two Stages, One Regression (Beaver, Griffin, and Landsman 1982) |
 | 3 | [`decks/week03/week3_callen_cds.pdf`](decks/week03/week3_callen_cds.pdf) | Centering, Mediators, and Residuals (Callen, Livnat, and Segal 2009) |
 | 3 | [`decks/week03/week3_jennings_partials.pdf`](decks/week03/week3_jennings_partials.pdf) | Coefficients as Partial Derivatives (Jennings 1990) |
+| 4 | [`decks/week04/week4_basu_asymmetric_timeliness.pdf`](decks/week04/week4_basu_asymmetric_timeliness.pdf) | Reversal and Truncation (Basu 1997) |
 
 ## Running the code
 

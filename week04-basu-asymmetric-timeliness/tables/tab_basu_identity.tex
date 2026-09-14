@@ -1,0 +1,18 @@
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+ & \multicolumn{2}{c}{Symmetric normal} & \multicolumn{2}{c}{Right-skewed $\eta$} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+ & Good, $R \ge 0$ & Bad, $R < 0$ & Good, $R \ge 0$ & Bad, $R < 0$ \\
+\midrule
+Forward slope $b$ & 1.009 & 1.009 & 0.978 & 0.978 \\
+SVR$_j$ & -0.745 & -0.736 & -0.860 & -0.273 \\
+ST$_j$ & -0.161 & -0.170 & -0.120 & -0.227 \\
+$b + \mathrm{SVR}_j + \mathrm{ST}_j$ & 0.103 & 0.102 & -0.002 & 0.478 \\
+Basu slope $\hat\delta_j$ & \textcolor{DeepNavy}{\bfseries 0.103} & \textcolor{DeepNavy}{\bfseries 0.102} & \textcolor{Maroon}{\bfseries -0.002} & \textcolor{Maroon}{\bfseries 0.478} \\
+\midrule
+$\mathrm{cov}(X, \eta \mid j)$ & -0.016 & -0.017 & -0.030 & -0.009 \\
+$R^2_j$ & 0.041 & 0.039 & 0.000 & 0.317 \\
+\midrule
+$\hat\beta_1$ ($t$) & \multicolumn{2}{c}{\textcolor{DeepNavy}{\bfseries -0.001 (-0.2)}} & \multicolumn{2}{c}{\textcolor{Maroon}{\bfseries 0.480 (95.6)}} \\
+\bottomrule
+\end{tabular}
