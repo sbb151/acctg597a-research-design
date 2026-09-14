@@ -15,6 +15,7 @@ Every `.do` file is **self-contained**: it generates its own simulated data, so 
 | 3 | `week03-jennings-partial-derivatives/` | A coefficient is a partial derivative in a direction fixed by the other regressors; with linked regressors (an identity, clean surplus, a first stage, an interaction) the marginal effect is a linear combination of coefficients | Jennings (1990, *TAR*) |
 | 4 | `week04-basu-asymmetric-timeliness/` | The asymmetric timeliness coefficient is nonzero under no conservatism: reversing the returns-earnings regression adds a variance-ratio bias and partitioning on the sign of returns adds a truncation bias, of unknown sign and size (Dietrich, Muller, and Riedl 2007) | Basu (1997, *JAE*) |
 | 4 | `week04-bll-r2-incomparability/` | R-squared is not comparable across samples: it mixes the slope with the dispersion of the regressor, so scale controls do not restore comparability (Gu 2007) | Brown, Lo, and Lys (1999, *JAE*) |
+| 4 | `week04-abk-heteroskedasticity/` | Deflation by a scale variable is weighted least squares under one assumed form of heteroskedasticity, correctly sized and efficient only when that form holds; White (1980) standard errors are consistent under any form, with a finite-sample leverage caveat that HC3 addresses | Aboody, Barth, and Kasznik (1999, *JAE*) |
 
 ## Lecture decks
 
@@ -35,6 +36,7 @@ Slides for the in-class research-design modules are posted under `decks/` as PDF
 | 3 | [`decks/week03/week3_jennings_partials.pdf`](decks/week03/week3_jennings_partials.pdf) | Coefficients as Partial Derivatives (Jennings 1990) |
 | 4 | [`decks/week04/week4_basu_asymmetric_timeliness.pdf`](decks/week04/week4_basu_asymmetric_timeliness.pdf) | Reversal and Truncation (Basu 1997) |
 | 4 | [`decks/week04/week4_bll_r2_incomparability.pdf`](decks/week04/week4_bll_r2_incomparability.pdf) | R-Squared as a Sample Statistic (Brown, Lo, and Lys 1999) |
+| 4 | [`decks/week04/week4_abk_heteroskedasticity.pdf`](decks/week04/week4_abk_heteroskedasticity.pdf) | Heteroskedasticity of Known and Unknown Form (Aboody, Barth, and Kasznik 1999) |
 
 ## Running the code
 
