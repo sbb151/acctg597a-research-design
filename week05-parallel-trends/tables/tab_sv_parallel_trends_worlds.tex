@@ -1,0 +1,14 @@
+\begin{tabular}{@{}lccc@{}}
+\toprule
+ & World 1 & World 2 & World 3 \\
+\midrule
+\multicolumn{4}{@{}l}{\emph{Known only to the simulator}} \\
+\quad Parallel trends, $k \geq 0$ & holds & \textcolor{Maroon}{\bfseries fails} & holds \\
+\quad Average ATT & 0.40 & \textcolor{Maroon}{\bfseries 0.00} & 0.40 \\
+\midrule
+\multicolumn{4}{@{}l}{\emph{Computed from observed outcomes}} \\
+\quad Pre-trend $F$ test, $p$ & 0.43 & \textcolor{Maroon}{\bfseries 0.43} & \textcolor{Maroon}{\bfseries $<$\,0.001} \\
+\quad $\hat\delta$ on $Post$ ($t$) & 0.39 (16.2) & 0.39 (16.2) & 0.39 (16.2) \\
+\quad $\hat\delta$ minus ATT & $-0.01$ & \textcolor{Maroon}{\bfseries 0.39} & $-0.01$ \\
+\bottomrule
+\end{tabular}
