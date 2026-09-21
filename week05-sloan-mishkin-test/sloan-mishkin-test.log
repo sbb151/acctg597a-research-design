@@ -1,0 +1,741 @@
+-------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/sbb151/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUn
+> iversity/ACCTG 597A/acctg597a-research-design/week05-sloan-mishkin-test/sloan
+> -mishkin-test.log
+  log type:  text
+ opened on:  21 Sep 2026, 00:01:05
+
+. capture mkdir figures
+
+. capture mkdir tables
+
+. 
+. * ---------------------------------------------------------------------------
+. * program mishkin: the Mishkin (1983) test by stacked weighted nonlinear leas
+> t
+. * squares.  Syntax: mishkin yfuture abret x1 x2 ... [, fast]
+. *   Forecasting eq.: yfuture = a0 + sum g_k x_k + v
+. *   Pricing eq.    : abret   = b*(yfuture - a0s - sum gs_k x_k) + e
+. * The two equations are stacked (2n rows) and each row is weighted by the
+. * inverse residual variance of its equation.  Option fast skips the nonlinear
+. * fit of the unconstrained system and uses its OLS equivalent (see Module 1).
+. * Returns r(LR), r(wald), r(b), r(g_k), r(gs_k) (Mishkin), r(go_k), r(gso_k) 
+> (OLS).
+. * ---------------------------------------------------------------------------
+. capture program drop mishkin
+
+. program define mishkin, rclass
+  1.     syntax varlist(min=3) [, fast]
+  2.     gettoken yf rest : varlist
+  3.     gettoken ar xs : rest
+  4.     local n = _N
+  5.     * OLS, equation by equation
+.     qui reg `yf' `xs'
+  6.     tempname s1 s2 bo
+  7.     scalar `s1' = e(rss)/e(N)
+  8.     local init "a0 `=_b[_cons]'"
+  9.     local k = 0
+ 10.     foreach x of local xs {
+ 11.         local ++k
+ 12.         return scalar go_`k' = _b[`x']
+ 13.         local init "`init' g`k' `=_b[`x']'"
+ 14.     }
+ 15.     qui reg `ar' `yf' `xs'
+ 16.     scalar `s2' = e(rss)/e(N)
+ 17.     scalar `bo' = _b[`yf']
+ 18.     return scalar bo = `bo'
+ 19.     local initu "`init' b `=`bo'' a0s `=-_b[_cons]/`bo''"
+ 20.     local initc "`initu'"
+ 21.     local k = 0
+ 22.     foreach x of local xs {
+ 23.         local ++k
+ 24.         return scalar gso_`k' = -_b[`x']/`bo'
+ 25.         local initu "`initu' gs`k' `=-_b[`x']/`bo''"
+ 26.     }
+ 27.     * OLS test that lagged information does not predict abnormal returns
+.     qui reg `ar' `xs'
+ 28.     qui test `xs'
+ 29.     return scalar wald = r(df)*r(F)
+ 30.     * stack the two equations
+.     preserve
+ 31.     tempvar id eq y d1 d2 w res
+ 32.     gen long `id' = _n
+ 33.     qui expand 2
+ 34.     bysort `id': gen byte `eq' = _n
+ 35.     gen double `y'  = cond(`eq'==1, `yf', `ar')
+ 36.     gen byte `d1' = `eq'==1
+ 37.     gen byte `d2' = `eq'==2
+ 38.     gen double `w' = cond(`eq'==1, 1/`s1', 1/`s2')
+ 39.     local fu "{a0}"
+ 40.     local pu "{a0s}"
+ 41.     local pc "{a0s}"
+ 42.     local k = 0
+ 43.     foreach x of local xs {
+ 44.         local ++k
+ 45.         local fu "`fu'+{g`k'}*`x'"
+ 46.         local pu "`pu'+{gs`k'}*`x'"
+ 47.         local pc "`pc'+{g`k'}*`x'"
+ 48.     }
+ 49.     if "`fast'"=="" {
+ 50.         qui nl (`y' = `d1'*(`fu') + `d2'*{b}*(`yf'-(`pu'))) [aw=`w'], init
+> ial(`initu')
+ 51.         return scalar b = _b[/b]
+ 52.         local k = 0
+ 53.         foreach x of local xs {
+ 54.             local ++k
+ 55.             return scalar g_`k'  = _b[/g`k']
+ 56.             return scalar gs_`k' = _b[/gs`k']
+ 57.         }
+ 58.         qui predict double `res', resid
+ 59.         qui replace `res' = `res'^2*`w'
+ 60.         qui sum `res'
+ 61.         local ssru = r(sum)
+ 62.         drop `res'
+ 63.     }
+ 64.     else local ssru = 2*`n'
+ 65.     qui nl (`y' = `d1'*(`fu') + `d2'*{b}*(`yf'-(`pc'))) [aw=`w'], initial(
+> `initc')
+ 66.     qui predict double `res', resid
+ 67.     qui replace `res' = `res'^2*`w'
+ 68.     qui sum `res'
+ 69.     return scalar LR = 2*`n'*ln(r(sum)/`ssru')
+ 70.     restore
+ 71. end
+
+. 
+. 
+. *****************************************************************************
+> ***
+. * MODULE 1: The unconstrained Mishkin estimates are OLS
+. * DGP with Sloan (1996, Table 5) values as the truth; N = 40,679.
+. * The stacked weighted nonlinear system reproduces equation-by-equation OLS
+. * (gamma_k* = -delta_k/b, asserted to 1e-6), and LR is close to the OLS Wald 
+> statistic.
+. *****************************************************************************
+> ***
+. clear
+
+. set seed 1996
+
+. set obs 40679
+Number of observations (_N) was 0, now 40,679.
+
+. gen acc = rnormal(0,0.08)
+
+. gen cf  = -0.5*acc + rnormal(0,0.08)
+
+. gen e1  = 0.01 + 0.765*acc + 0.855*cf + rnormal(0,0.06)
+
+. gen ar  = 1.894*(e1 - 0.01 - 0.911*acc - 0.826*cf) + rnormal(0,0.30)
+
+. 
+. mishkin e1 ar acc cf
+
+. di _n "Mishkin (stacked weighted NLS) versus OLS:"
+
+Mishkin (stacked weighted NLS) versus OLS:
+
+. di "  gamma1  : " %9.6f r(g_1)  "   OLS gamma1          : " %9.6f r(go_1)
+  gamma1  :  0.763961   OLS gamma1          :  0.763961
+
+. di "  gamma2  : " %9.6f r(g_2)  "   OLS gamma2          : " %9.6f r(go_2)
+  gamma2  :  0.848919   OLS gamma2          :  0.848919
+
+. di "  gamma1* : " %9.6f r(gs_1) "   OLS -delta1/b       : " %9.6f r(gso_1)
+  gamma1* :  0.919456   OLS -delta1/b       :  0.919456
+
+. di "  gamma2* : " %9.6f r(gs_2) "   OLS -delta2/b       : " %9.6f r(gso_2)
+  gamma2* :  0.832380   OLS -delta2/b       :  0.832380
+
+. di "  beta    : " %9.6f r(b)    "   OLS b               : " %9.6f r(bo)
+  beta    :  1.895776   OLS b               :  1.895776
+
+. di "  LR statistic: " %8.2f r(LR) "   OLS Wald chi2(2): " %8.2f r(wald)
+  LR statistic:   245.20   OLS Wald chi2(2):   245.71
+
+. di _n "Identity checks (should be zero to machine precision):"
+
+Identity checks (should be zero to machine precision):
+
+. di "  gamma1* minus (-delta1/b): " %12.8f (r(gs_1)-r(gso_1))
+  gamma1* minus (-delta1/b):  -0.00000000
+
+. di "  gamma2* minus (-delta2/b): " %12.8f (r(gs_2)-r(gso_2))
+  gamma2* minus (-delta2/b):   0.00000000
+
+. assert abs(r(g_1)-r(go_1))   < 1e-6
+
+. assert abs(r(g_2)-r(go_2))   < 1e-6
+
+. assert abs(r(gs_1)-r(gso_1)) < 1e-6
+
+. assert abs(r(gs_2)-r(gso_2)) < 1e-6
+
+. assert abs(r(b)-r(bo))       < 1e-6
+
+. assert abs(r(LR)-r(wald))/r(wald) < 0.02
+
+. 
+. foreach s in g_1 g_2 gs_1 gs_2 b go_1 go_2 gso_1 gso_2 bo {
+  2.     local f`s' : di %5.3f r(`s')
+  3.     local f`s' = strtrim("`f`s''")
+  4. }
+
+. local fLR : di %6.1f r(LR)
+
+. local fLR = strtrim("`fLR'")
+
+. local fW  : di %6.1f r(wald)
+
+. local fW  = strtrim("`fW'")
+
+. file open tab using tables/tab_sloan_mishkin_test_identity.tex, write replace
+
+. file write tab "\begin{tabular}{@{}lccc@{}}" _n "\toprule" _n
+
+. file write tab " & Truth & Mishkin NLS & From OLS \\" _n "\midrule" _n
+
+. file write tab "\$\gamma_1\$ (accruals) & 0.765 & `fg_1' & `fgo_1' \\" _n
+
+. file write tab "\$\gamma_2\$ (cash flows) & 0.855 & `fg_2' & `fgo_2' \\" _n
+
+. file write tab "\$\gamma_1^{*}\$ & 0.911 & \textcolor{Maroon}{\bfseries `fgs_
+> 1'} & \textcolor{Maroon}{\bfseries `fgso_1'} \\" _n
+
+. file write tab "\$\gamma_2^{*}\$ & 0.826 & \textcolor{Maroon}{\bfseries `fgs_
+> 2'} & \textcolor{Maroon}{\bfseries `fgso_2'} \\" _n
+
+. file write tab "\$\beta\$ & 1.894 & `fb' & `fbo' \\" _n "\midrule" _n
+
+. file write tab "Test statistic, \$\chi^2(2)\$ & & LR \$=\$ `fLR' & Wald \$=\$
+>  `fW' \\" _n
+
+. file write tab "\bottomrule" _n "\end{tabular}" _n
+
+. file close tab
+
+. type tables/tab_sloan_mishkin_test_identity.tex
+\begin{tabular}{@{}lccc@{}}
+\toprule
+ & Truth & Mishkin NLS & From OLS \\
+\midrule
+$\gamma_1$ (accruals) & 0.765 & 0.764 & 0.764 \\
+$\gamma_2$ (cash flows) & 0.855 & 0.849 & 0.849 \\
+$\gamma_1^{*}$ & 0.911 & \textcolor{Maroon}{\bfseries 0.919} & \textcolor{Maroo
+> n}{\bfseries 0.919} \\
+$\gamma_2^{*}$ & 0.826 & \textcolor{Maroon}{\bfseries 0.832} & \textcolor{Maroo
+> n}{\bfseries 0.832} \\
+$\beta$ & 1.894 & 1.896 & 1.896 \\
+\midrule
+Test statistic, $\chi^2(2)$ & & LR $=$ 245.2 & Wald $=$ 245.7 \\
+\bottomrule
+\end{tabular}
+
+. di "Done: tables/tab_sloan_mishkin_test_identity.tex"
+Done: tables/tab_sloan_mishkin_test_identity.tex
+
+. 
+. 
+. *****************************************************************************
+> ***
+. * MODULE 2: The LR statistic tracks the OLS Wald statistic
+. * Monte Carlo, 300 samples of N = 2,000, market accrual weight varied across 
+> samples.
+. *****************************************************************************
+> ***
+. clear
+
+. set seed 1996
+
+. tempname sims
+
+. tempfile mc
+
+. postfile `sims' gap LR wald using `mc', replace
+(file /var/folders/ms/1p996tm15bz7p8szd7_97sk00000gn/T//St17302.000001 not
+    found)
+
+. forvalues r = 1/300 {
+  2.     qui {
+  3.         clear
+  4.         set obs 2000
+  5.         local gap = 0.30*runiform()
+  6.         gen acc = rnormal(0,0.08)
+  7.         gen cf  = -0.5*acc + rnormal(0,0.08)
+  8.         gen e1  = 0.01 + 0.765*acc + 0.855*cf + rnormal(0,0.06)
+  9.         gen ar  = 1.894*(e1 - 0.01 - (0.765+`gap')*acc - 0.855*cf) + rnorm
+> al(0,0.30)
+ 10.         mishkin e1 ar acc cf, fast
+ 11.         post `sims' (`gap') (r(LR)) (r(wald))
+ 12.     }
+ 13. }
+
+. postclose `sims'
+
+. use `mc', clear
+
+. corr LR wald
+(obs=300)
+
+             |       LR     wald
+-------------+------------------
+          LR |   1.0000
+        wald |   1.0000   1.0000
+
+
+. scalar rho = r(rho)
+
+. gen reldiff = abs(LR-wald)/wald
+
+. sum reldiff, meanonly
+
+. scalar mrd = r(mean)
+
+. gen byte dis = (LR>5.99) != (wald>5.99)
+
+. count if dis
+  1
+
+. scalar ndis = r(N)
+
+. di _n "Correlation of LR and Wald: " %8.5f rho
+
+Correlation of LR and Wald:  0.99999
+
+. di "Mean relative difference  : " %8.5f mrd
+Mean relative difference  :  0.00193
+
+. di "Replications (of 300) in which the two tests disagree at 5 percent: " ndi
+> s
+Replications (of 300) in which the two tests disagree at 5 percent: 1
+
+. assert rho > 0.999
+
+. assert mrd < 0.02
+
+. local frho : di %7.5f rho
+
+. sum wald, meanonly
+
+. local mx = ceil(r(max)/10)*10
+
+. twoway (function y = x, range(0 `mx') lcolor(gs8) lpattern(dash))          //
+> /
+>        (scatter LR wald, mcolor(navy%60) msymbol(circle) msize(small)),    //
+> /
+>     xline(5.99, lcolor(maroon) lpattern(shortdash))                         /
+> //
+>     yline(5.99, lcolor(maroon) lpattern(shortdash))                         /
+> //
+>     text(`=0.55*`mx'' `=0.97*`mx'' "45-degree line", color(gs6) size(medium) 
+> placement(w)) ///
+>     text(`=0.90*`mx'' `=0.12*`mx'' "correlation = `frho'", color(navy) size(m
+> edium) placement(e)) ///
+>     text(`=0.12*`mx'' `=0.97*`mx'' "5 percent critical value of chi2(2), 5.99
+> ", color(maroon) size(medium) placement(w)) ///
+>     xtitle("OLS Wald statistic (returns on accruals and cash flows)")       /
+> //
+>     ytitle("Mishkin LR statistic")                                          /
+> //
+>     ylabel(, angle(horizontal))                                             /
+> //
+>     title("The Mishkin LR statistic tracks the OLS Wald statistic")          
+>   ///
+>     subtitle("Simulated data (seed 1996): 300 samples, N = 2,000 each")     /
+> //
+>     legend(off) scheme(s1color) xsize(9) ysize(5)
+
+. graph export figures/fig2_sloan_mishkin_test_lrwald.png, replace width(2000)
+file figures/fig2_sloan_mishkin_test_lrwald.png written in PNG format
+
+. di "Done: figures/fig2_sloan_mishkin_test_lrwald.png"
+Done: figures/fig2_sloan_mishkin_test_lrwald.png
+
+. 
+. 
+. *****************************************************************************
+> ***
+. * MODULE 3: An omitted, mispriced correlate of accruals
+. * Accruals and cash flows are rationally priced; an omitted variable Z (corre
+> lated
+. * with accruals, mispriced) makes accruals appear mispriced. Analytical gap 0
+> .146.
+. *****************************************************************************
+> ***
+. clear
+
+. set seed 1996
+
+. set obs 40679
+Number of observations (_N) was 0, now 40,679.
+
+. gen acc = rnormal(0,0.08)
+
+. gen cf  = -0.5*acc + rnormal(0,0.08)
+
+. gen z   = 0.5*acc + rnormal(0,0.08)
+
+. gen e1  = 0.01 + 0.765*acc + 0.855*cf + 0*z + rnormal(0,0.06)
+
+. gen ar  = 1.894*(e1 - 0.01 - 0.765*acc - 0.855*cf - 0.292*z) + rnormal(0,0.30
+> )
+
+. 
+. mishkin e1 ar acc cf
+
+. foreach s in g_1 gs_1 g_2 gs_2 {
+  2.     local o`s' : di %5.3f r(`s')
+  3.     local o`s' = strtrim("`o`s''")
+  4. }
+
+. local oLR : di %6.1f r(LR)
+
+. local oLR = strtrim("`oLR'")
+
+. scalar gap_o = r(gs_1)-r(g_1)
+
+. di _n "Z omitted : gamma1 = " %6.3f r(g_1) "  gamma1* = " %6.3f r(gs_1) "  ga
+> p = " %6.3f gap_o "  LR = " %7.1f r(LR)
+
+Z omitted : gamma1 =  0.762  gamma1* =  0.916  gap =  0.154  LR =   215.0
+
+. di "            gamma2 = " %6.3f r(g_2) "  gamma2* = " %6.3f r(gs_2)
+            gamma2 =  0.853  gamma2* =  0.849
+
+. di "  analytical gap = 0.146 ; simulated minus analytical = " %7.4f (gap_o-0.
+> 146)
+  analytical gap = 0.146 ; simulated minus analytical =  0.0082
+
+. assert abs(gap_o-0.146) < 0.03
+
+. 
+. mishkin e1 ar acc cf z
+
+. foreach s in g_1 gs_1 g_2 gs_2 g_3 gs_3 {
+  2.     local i`s' : di %5.3f r(`s')
+  3.     local i`s' = strtrim("`i`s''")
+  4. }
+
+. local iLR : di %6.1f r(LR)
+
+. local iLR = strtrim("`iLR'")
+
+. scalar gap_i = r(gs_1)-r(g_1)
+
+. di "Z included: gamma1 = " %6.3f r(g_1) "  gamma1* = " %6.3f r(gs_1) "  gap =
+>  " %6.3f gap_i "  LR(3) = " %7.1f r(LR)
+Z included: gamma1 =  0.762  gamma1* =  0.776  gap =  0.014  LR(3) =   917.1
+
+. di "            gamma3 = " %6.3f r(g_3) "  gamma3* = " %6.3f r(gs_3)
+            gamma3 =  0.000  gamma3* =  0.281
+
+. assert abs(gap_i) < 0.03
+
+. 
+. file open tab using tables/tab_sloan_mishkin_test_omitted.tex, write replace
+
+. file write tab "\begin{tabular}{@{}lccc@{}}" _n "\toprule" _n
+
+. file write tab " & Truth & \$Z\$ omitted & \$Z\$ included \\" _n "\midrule" _
+> n
+
+. file write tab "\$\gamma_1\$ (accruals, data) & 0.765 & `og_1' & `ig_1' \\" _
+> n
+
+. file write tab "\$\gamma_1^{*}\$ (accruals, prices) & 0.765 & \textcolor{Maro
+> on}{\bfseries `ogs_1'} & \textcolor{DeepNavy}{\bfseries `igs_1'} \\" _n
+
+. file write tab "\$\gamma_2\$ (cash flows, data) & 0.855 & `og_2' & `ig_2' \\"
+>  _n
+
+. file write tab "\$\gamma_2^{*}\$ (cash flows, prices) & 0.855 & `ogs_2' & `ig
+> s_2' \\" _n
+
+. file write tab "\$\gamma_3\$ (\$Z\$, data) & 0.000 & & `ig_3' \\" _n
+
+. file write tab "\$\gamma_3^{*}\$ (\$Z\$, prices) & 0.292 & & `igs_3' \\" _n "
+> \midrule" _n
+
+. file write tab "LR statistic & & `oLR' {\small [\$\chi^2(2)\$]} & `iLR' {\sma
+> ll [\$\chi^2(3)\$]} \\" _n
+
+. file write tab "\bottomrule" _n "\end{tabular}" _n
+
+. file close tab
+
+. type tables/tab_sloan_mishkin_test_omitted.tex
+\begin{tabular}{@{}lccc@{}}
+\toprule
+ & Truth & $Z$ omitted & $Z$ included \\
+\midrule
+$\gamma_1$ (accruals, data) & 0.765 & 0.762 & 0.762 \\
+$\gamma_1^{*}$ (accruals, prices) & 0.765 & \textcolor{Maroon}{\bfseries 0.916}
+>  & \textcolor{DeepNavy}{\bfseries 0.776} \\
+$\gamma_2$ (cash flows, data) & 0.855 & 0.853 & 0.853 \\
+$\gamma_2^{*}$ (cash flows, prices) & 0.855 & 0.849 & 0.851 \\
+$\gamma_3$ ($Z$, data) & 0.000 & & 0.000 \\
+$\gamma_3^{*}$ ($Z$, prices) & 0.292 & & 0.281 \\
+\midrule
+LR statistic & & 215.0 {\small [$\chi^2(2)$]} & 917.1 {\small [$\chi^2(3)$]} \\
+\bottomrule
+\end{tabular}
+
+. di "Done: tables/tab_sloan_mishkin_test_omitted.tex"
+Done: tables/tab_sloan_mishkin_test_omitted.tex
+
+. 
+. 
+. *****************************************************************************
+> ***
+. * MODULE 4: Pooled LR statistics and cross-sectional correlation
+. * The null is true; the yearly return loading on accruals has mean zero. 500 
+> replications.
+. * Runtime: a few minutes.
+. *****************************************************************************
+> ***
+. clear
+
+. set seed 1996
+
+. tempname sims
+
+. tempfile mc
+
+. postfile `sims' LR wald tfm using `mc', replace
+(file /var/folders/ms/1p996tm15bz7p8szd7_97sk00000gn/T//St17302.000002 not
+    found)
+
+. forvalues r = 1/500 {
+  2.     qui {
+  3.         clear
+  4.         set obs 30
+  5.         gen year = _n
+  6.         gen ct = rnormal(0,0.40)
+  7.         expand 500
+  8.         gen acc = rnormal(0,0.08)
+  9.         gen cf  = -0.5*acc + rnormal(0,0.08)
+ 10.         gen v   = rnormal(0,0.06)
+ 11.         gen e1  = 0.01 + 0.765*acc + 0.855*cf + v
+ 12.         gen ar  = 1.894*v + ct*acc + rnormal(0,0.30)
+ 13.         mishkin e1 ar acc cf, fast
+ 14.         local LR = r(LR)
+ 15.         local W  = r(wald)
+ 16.         gen bfm = .
+ 17.         forvalues t = 1/30 {
+ 18.             reg ar acc cf if year==`t'
+ 19.             replace bfm = _b[acc] in `t'
+ 20.         }
+ 21.         sum bfm in 1/30
+ 22.         local tfm = r(mean)/(r(sd)/sqrt(30))
+ 23.         post `sims' (`LR') (`W') (`tfm')
+ 24.     }
+ 25. }
+
+. postclose `sims'
+
+. use `mc', clear
+
+. gen byte rLR = LR   > invchi2tail(2,0.05)
+
+. gen byte rW  = wald > invchi2tail(2,0.05)
+
+. gen byte rFM = abs(tfm) > invttail(29,0.025)
+
+. foreach s in rLR rW rFM {
+  2.     sum `s', meanonly
+  3.     scalar p_`s' = 100*r(mean)
+  4.     local f`s' : di %4.1f p_`s'
+  5.     local f`s' = strtrim("`f`s''")
+  6. }
+
+. di _n "Rejection rates at the nominal 5 percent level (null is true), 500 rep
+> lications:"
+
+Rejection rates at the nominal 5 percent level (null is true), 500 replications
+> :
+
+. di "  pooled Mishkin LR : " %5.1f p_rLR " percent"
+  pooled Mishkin LR :  35.6 percent
+
+. di "  pooled OLS Wald   : " %5.1f p_rW  " percent"
+  pooled OLS Wald   :  35.6 percent
+
+. di "  Fama-MacBeth t    : " %5.1f p_rFM " percent"
+  Fama-MacBeth t    :   5.8 percent
+
+. assert p_rLR > 20
+
+. assert abs(p_rFM - 5) < 3
+
+. file open tab using tables/tab_sloan_mishkin_test_size.tex, write replace
+
+. file write tab "\begin{tabular}{@{}lc@{}}" _n "\toprule" _n
+
+. file write tab "Test at the 5 percent level (a correct test rejects 5\%) & Re
+> jection rate \\" _n "\midrule" _n
+
+. file write tab "Pooled Mishkin LR, \$\chi^2(2)\$ & \textcolor{Maroon}{\bfseri
+> es `frLR'\%} \\" _n
+
+. file write tab "Pooled OLS Wald, \$\chi^2(2)\$ & \textcolor{Maroon}{\bfseries
+>  `frW'\%} \\" _n
+
+. file write tab "Fama-MacBeth \$t\$ (one regression per year; \$t\$-test on 30
+>  slopes) & \textcolor{DeepNavy}{\bfseries `frFM'\%} \\" _n
+
+. file write tab "\bottomrule" _n "\end{tabular}" _n
+
+. file close tab
+
+. type tables/tab_sloan_mishkin_test_size.tex
+\begin{tabular}{@{}lc@{}}
+\toprule
+Test at the 5 percent level (a correct test rejects 5\%) & Rejection rate \\
+\midrule
+Pooled Mishkin LR, $\chi^2(2)$ & \textcolor{Maroon}{\bfseries 35.6\%} \\
+Pooled OLS Wald, $\chi^2(2)$ & \textcolor{Maroon}{\bfseries 35.6\%} \\
+Fama-MacBeth $t$ (one regression per year; $t$-test on 30 slopes) & \textcolor{
+> DeepNavy}{\bfseries 5.8\%} \\
+\bottomrule
+\end{tabular}
+
+. di "Done: tables/tab_sloan_mishkin_test_size.tex"
+Done: tables/tab_sloan_mishkin_test_size.tex
+
+. 
+. 
+. *****************************************************************************
+> ***
+. * MODULE 5: Sloan (1996), Tables 4 and 5, recreated as a figure
+. * No simulation.
+. *****************************************************************************
+> ***
+. clear
+
+. input x data price
+
+             x       data      price
+  1. 1 0.841 0.840
+  2. 2 0.765 0.911
+  3. 3 0.855 0.826
+  4. end
+
+. gen xd = x - 0.08
+
+. gen xp = x + 0.08
+
+. twoway (pcspike data xd price xp, lcolor(gs10))                              
+>      ///
+>        (scatter data xd, mcolor(navy) msymbol(circle) msize(vlarge))         
+>      ///
+>        (scatter price xp, mcolor(maroon) msymbol(diamond) msize(vlarge)),    
+>      ///
+>     yline(0.841, lcolor(gs8) lpattern(dash))                                 
+>       ///
+>     text(0.866 0.55 "fixation benchmark, 0.841", color(gs6) size(medsmall) pl
+> acement(e)) ///
+>     text(0.765 1.86 "data: 0.765", color(navy) size(medium) placement(w))    
+>      ///
+>     text(0.911 2.14 "prices: 0.911", color(maroon) size(medium) placement(e))
+>      ///
+>     text(0.870 2.86 "data: 0.855", color(navy) size(medium) placement(w))    
+>      ///
+>     text(0.812 3.14 "prices: 0.826", color(maroon) size(medium) placement(e))
+>      ///
+>     text(0.815 1 "data 0.841, prices 0.840", color(gs4) size(medium))        
+>      ///
+>     text(0.740 1 "LR = 0.007 (p = 0.933)", color(gs4) size(medsmall))        
+>      ///
+>     text(0.740 2.5 "LR = 180.91 (p = 0.000)", color(gs4) size(medsmall))     
+>      ///
+>     xlabel(1 "Earnings" 2 "Accruals" 3 "Cash flows", noticks) xscale(range(0.
+> 5 3.95)) ///
+>     ylabel(0.70(0.05)0.95, angle(horizontal) format(%4.2f)) yscale(range(0.72
+>  0.95)) ///
+>     xtitle("") ytitle("Persistence coefficient")                             
+>      ///
+>     title("Prices overweight accruals and underweight cash flows")           
+>      ///
+>     subtitle("Recreated from Sloan (1996), Tables 4-5, pp. 304-305; N = 40,67
+> 9")  ///
+>     legend(off) scheme(s1color) xsize(9) ysize(5)
+
+. graph export figures/fig1_sloan_mishkin_test_table5.png, replace width(2000)
+file figures/fig1_sloan_mishkin_test_table5.png written in PNG format
+
+. di "Done: figures/fig1_sloan_mishkin_test_table5.png"
+Done: figures/fig1_sloan_mishkin_test_table5.png
+
+. 
+. 
+. *****************************************************************************
+> ***
+. * MODULE 6: The implied bias varies inversely with the ERC
+. * Recreated from Lewellen (2010, p. 461). No simulation.
+. *****************************************************************************
+> ***
+. clear
+
+. scalar gS = 1.894*(0.765-0.911)
+
+. scalar gD = 1.206*(0.647-0.938)
+
+. di "Return slope, Sloan: " %6.3f gS "   implied gap: " %6.3f (-gS/1.894)
+Return slope, Sloan: -0.277   implied gap:  0.146
+
+. di "Return slope, DRS  : " %6.3f gD "   implied gap: " %6.3f (-gD/1.206)
+Return slope, DRS  : -0.351   implied gap:  0.291
+
+. assert abs(-gS/1.894 - 0.146) < 1e-6
+
+. assert abs(-gD/1.206 - 0.291) < 1e-6
+
+. local gs = -gS
+
+. local gd = -gD
+
+. twoway (function y = `gs'/x, range(0.9 3) lcolor(navy) lwidth(medthick))     
+>        ///
+>        (function y = `gd'/x, range(0.9 3) lcolor(maroon) lwidth(medthick))   
+>        ///
+>        (scatteri 0.146 1.894, mcolor(navy) msymbol(circle) msize(vlarge))    
+>        ///
+>        (scatteri 0.291 1.206, mcolor(maroon) msymbol(diamond) msize(vlarge)),
+>        ///
+>     text(0.085 1.87 "Sloan (1996):" "ERC 1.894, gap 0.146", color(navy) size(
+> medium) placement(w) justification(right)) ///
+>     text(0.335 1.28 "Dechow, Richardson, and Sloan (2008):" "ERC 1.206, gap 0
+> .291", color(maroon) size(medium) placement(e) justification(left)) ///
+>     text(0.062 2.95 "return slope -0.28", color(navy) size(medsmall) placemen
+> t(w))  ///
+>     text(0.168 2.95 "return slope -0.35", color(maroon) size(medsmall) placem
+> ent(w)) ///
+>     xtitle("Earnings response coefficient (beta)")                           
+>         ///
+>     ytitle("Implied misperception (gamma1* minus gamma1)")                   
+>         ///
+>     xlabel(1(0.5)3) ylabel(0(0.1)0.4, angle(horizontal) format(%3.1f))       
+>         ///
+>     title("Similar return slopes imply different misperceptions")            
+>        ///
+>     subtitle("Values from Lewellen (2010, p. 461); gap = -(return slope)/ERC"
+> )    ///
+>     legend(off) scheme(s1color) xsize(9) ysize(5)
+
+. graph export figures/fig3_sloan_mishkin_test_erc.png, replace width(2000)
+file figures/fig3_sloan_mishkin_test_erc.png written in PNG format
+
+. di "Done: figures/fig3_sloan_mishkin_test_erc.png"
+Done: figures/fig3_sloan_mishkin_test_erc.png
+
+. 
+. 
+. log close
+      name:  <unnamed>
+       log:  /Users/sbb151/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUn
+> iversity/ACCTG 597A/acctg597a-research-design/week05-sloan-mishkin-test/sloan
+> -mishkin-test.log
+  log type:  text
+ closed on:  21 Sep 2026, 00:02:24
+-------------------------------------------------------------------------------
