@@ -18,6 +18,7 @@ Every `.do` file is **self-contained**: it generates its own simulated data, so 
 | 4 | `week04-abk-heteroskedasticity/` | Deflation by a scale variable is weighted least squares under one assumed form of heteroskedasticity, correctly sized and efficient only when that form holds; White (1980) standard errors are consistent under any form, with a finite-sample leverage caveat that HC3 addresses | Aboody, Barth, and Kasznik (1999, *JAE*) |
 | 5 | `week05-sloan-mishkin-test/` | The Mishkin test is, in large samples, a regression of abnormal returns on lagged information: its unconstrained estimates reproduce OLS, an omitted mispriced correlate shifts the starred coefficient, the implied misperception varies inversely with the earnings response coefficient, and pooled likelihood ratio statistics can overstate significance (Kraft, Leone, and Wasley 2007; Lewellen 2010) | Sloan (1996, *TAR*) |
 | 5 | `week05-parallel-trends/` | Parallel trends restricts the untreated outcome of treated firms after treatment, which is never observed, so the assumption is not testable: a pre-trend test passes when the assumption fails (an observationally equivalent world), rejects when it holds (a transitory pre-period shock), and has low power against a drift (Roth 2022; Kahn-Lang and Lang 2020) | Schafhäutle and Veenman (2024, *TAR*) |
+| 6 | `week06-mediation-moderation/` | The mediation decomposition c = c' + ab is an OLS identity, not a test: the indirect effect ab has a skewed sampling distribution (a percentile bootstrap interval over the Sobel test), a null total effect does not preclude it, the moderation coefficient b1 is a conditional effect at W = 0 and centering only relabels it, moderated mediation is tested through the index a3 b, and an unobserved variable in both M and Y or measurement error in M moves the split between direct and indirect paths while the total effect of an exogenous X stays unbiased (Hayes and Rockwood 2017; Lennox and Payne-Mann 2026) | Bhattacharya, Ecker, Olsson, and Schipper (2012, *TAR*) |
 
 ## Lecture decks
 
@@ -41,6 +42,7 @@ Slides for the in-class research-design modules are posted under `decks/` as PDF
 | 4 | [`decks/week04/week4_abk_heteroskedasticity.pdf`](decks/week04/week4_abk_heteroskedasticity.pdf) | Heteroskedasticity of Known and Unknown Form (Aboody, Barth, and Kasznik 1999) |
 | 5 | [`decks/week05/week5_sloan_mishkin_test.pdf`](decks/week05/week5_sloan_mishkin_test.pdf) | The Mishkin Test as a Return Regression (Sloan 1996) |
 | 5 | [`decks/week05/week5_sv_parallel_trends.pdf`](decks/week05/week5_sv_parallel_trends.pdf) | Parallel Trends as a Counterfactual Assumption (Schafhäutle and Veenman 2024) |
+| 6 | [`decks/week06/week6_mediation_moderation.pdf`](decks/week06/week6_mediation_moderation.pdf) | Direct, Indirect, and Conditional Effects (Bhattacharya, Ecker, Olsson, and Schipper 2012) |
 
 ## Running the code
 

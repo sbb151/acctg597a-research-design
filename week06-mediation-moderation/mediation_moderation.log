@@ -1,0 +1,1798 @@
+-------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/sbb151/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUn
+> iversity/ACCTG 597A/acctg597a-research-design/week06-mediation-moderation/med
+> iation_moderation.log
+  log type:  text
+ opened on:  27 Sep 2026, 15:21:20
+
+. capture mkdir figures
+
+. capture mkdir tables
+
+. 
+. *****************************************************************************
+> ***
+. * MODULE 1: the decomposition c = c' + ab holds exactly; a zero total effect 
+> does not preclude an indirect effect
+. *****************************************************************************
+> ***
+. *****************************************************************************
+> ***
+. * ACCTG 597A -- Week 6 (mediation and moderation module)
+. * The total effect decomposes exactly into direct and indirect components:
+. * c = c' + ab when one OLS sample estimates M on X and Y on X and M.
+. *
+. * Pure simulation, N = 5,000. One draw of X and e_M is shared by two designs,
+. * so the a path is identical and only the Y equation differs.
+. *   M = 0.5 X + e_M                          (a = 0.5)
+. *   Design A: Y = 0.2 X + 0.8 M + e_Y        (c' = 0.2, b = 0.8, ab = 0.4, c 
+> = 0.6)
+. *   Design B: Y = -0.4 X + 0.8 M + e_Y       (c' = -0.4, b = 0.8, ab = 0.4, c
+>  = 0.0)
+. * All shocks standard normal. Design B has a zero total effect and a nonzero
+. * indirect effect, so a test of c cannot serve as a gate for a test of ab.
+. * Identity checked: c - (c' + ab) = 0 to machine precision in both designs;
+. * the path coefficients from Stata's sem command equal the OLS coefficients.
+. * Requirements: base Stata. Output: tables/tab_mediation_moderation_identity.
+> tex
+. *****************************************************************************
+> ***
+. 
+. clear all
+
+. set seed 2012
+
+. 
+. set obs 5000
+Number of observations (_N) was 0, now 5,000.
+
+. gen x  = rnormal()
+
+. gen em = rnormal()
+
+. gen ey = rnormal()
+
+. gen m  = 0.5*x + em
+
+. gen yA =  0.2*x + 0.8*m + ey
+
+. gen yB = -0.4*x + 0.8*m + ey
+
+. 
+. * ---- Eq. (2) of Hayes and Rockwood: M on X (the a path), common to both des
+> igns ----
+. reg m x
+
+      Source |       SS           df       MS      Number of obs   =     5,000
+-------------+----------------------------------   F(1, 4998)      =   1209.79
+       Model |  1206.41638         1  1206.41638   Prob > F        =    0.0000
+    Residual |  4984.08124     4,998  .997215133   R-squared       =    0.1949
+-------------+----------------------------------   Adj R-squared   =    0.1947
+       Total |  6190.49761     4,999  1.23834719   Root MSE        =    .99861
+
+------------------------------------------------------------------------------
+           m | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           x |   .4849122   .0139415    34.78   0.000     .4575808    .5122436
+       _cons |   .0019266   .0141225     0.14   0.891    -.0257596    .0296128
+------------------------------------------------------------------------------
+
+. scalar a   = _b[x]
+
+. scalar at  = _b[x]/_se[x]
+
+. scalar ase = _se[x]
+
+. 
+. foreach d in A B {
+  2.     * Eq. (3): Y on X and M (c' and b)
+.     reg y`d' x m
+  3.     scalar cp`d'   = _b[x]
+  4.     scalar cp`d't  = _b[x]/_se[x]
+  5.     scalar b`d'    = _b[m]
+  6.     scalar b`d't   = _b[m]/_se[m]
+  7.     scalar bse`d'  = _se[m]
+  8.     * Eq. (1): Y on X (the total effect c)
+.     reg y`d' x
+  9.     scalar c`d'    = _b[x]
+ 10.     scalar c`d't   = _b[x]/_se[x]
+ 11.     scalar ab`d'   = a*b`d'
+ 12.     scalar sum`d'  = cp`d' + ab`d'
+ 13.     scalar sob`d'  = sqrt(b`d'^2*ase^2 + a^2*bse`d'^2)
+ 14.     scalar abz`d'  = ab`d'/sob`d'
+ 15. }
+
+      Source |       SS           df       MS      Number of obs   =     5,000
+-------------+----------------------------------   F(2, 4997)      =   2412.98
+       Model |  4866.69731         2  2433.34865   Prob > F        =    0.0000
+    Residual |   5039.1847     4,997  1.00844201   R-squared       =    0.4913
+-------------+----------------------------------   Adj R-squared   =    0.4911
+       Total |  9905.88201     4,999  1.98157272   Root MSE        =    1.0042
+
+------------------------------------------------------------------------------
+          yA | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           x |   .2019701   .0156246    12.93   0.000      .171339    .2326013
+           m |   .7899997   .0142244    55.54   0.000     .7621137    .8178857
+       _cons |    .016457   .0142018     1.16   0.247    -.0113847    .0442986
+------------------------------------------------------------------------------
+
+      Source |       SS           df       MS      Number of obs   =     5,000
+-------------+----------------------------------   F(1, 4998)      =   1076.99
+       Model |  1756.13484         1  1756.13484   Prob > F        =    0.0000
+    Residual |  8149.74717     4,998  1.63060168   R-squared       =    0.1773
+-------------+----------------------------------   Adj R-squared   =    0.1771
+       Total |  9905.88201     4,999  1.98157272   Root MSE        =     1.277
+
+------------------------------------------------------------------------------
+          yA | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           x |   .5850506   .0178274    32.82   0.000     .5501011    .6200002
+       _cons |   .0179789   .0180588     1.00   0.320    -.0174243    .0533822
+------------------------------------------------------------------------------
+
+      Source |       SS           df       MS      Number of obs   =     5,000
+-------------+----------------------------------   F(2, 4997)      =   1542.83
+       Model |  3111.70909         2  1555.85454   Prob > F        =    0.0000
+    Residual |   5039.1847     4,997    1.008442   R-squared       =    0.3818
+-------------+----------------------------------   Adj R-squared   =    0.3815
+       Total |  8150.89379     4,999  1.63050486   Root MSE        =    1.0042
+
+------------------------------------------------------------------------------
+          yB | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           x |  -.3980299   .0156246   -25.47   0.000     -.428661   -.3673987
+           m |   .7899997   .0142244    55.54   0.000     .7621137    .8178857
+       _cons |    .016457   .0142018     1.16   0.247    -.0113847    .0442986
+------------------------------------------------------------------------------
+
+      Source |       SS           df       MS      Number of obs   =     5,000
+-------------+----------------------------------   F(1, 4998)      =      0.70
+       Model |  1.14661455         1  1.14661455   Prob > F        =    0.4018
+    Residual |  8149.74717     4,998  1.63060167   R-squared       =    0.0001
+-------------+----------------------------------   Adj R-squared   =   -0.0001
+       Total |  8150.89379     4,999  1.63050486   Root MSE        =     1.277
+
+------------------------------------------------------------------------------
+          yB | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           x |  -.0149494   .0178274    -0.84   0.402    -.0498989    .0200002
+       _cons |   .0179789   .0180588     1.00   0.320    -.0174243    .0533822
+------------------------------------------------------------------------------
+
+. 
+. di _n "Design A: a = " %6.3f a " b = " %6.3f bA " c' = " %6.3f cpA ///
+>       " ab = " %6.3f abA " (Sobel z = " %4.1f abzA ") c = " %6.3f cA " (t = "
+>  %4.1f cAt ")"
+
+Design A: a =  0.485 b =  0.790 c' =  0.202 ab =  0.383 (Sobel z = 29.5) c =  0
+> .585 (t = 32.8)
+
+. di    "Design B: a = " %6.3f a " b = " %6.3f bB " c' = " %6.3f cpB ///
+>       " ab = " %6.3f abB " (Sobel z = " %4.1f abzB ") c = " %6.3f cB " (t = "
+>  %4.1f cBt ")"
+Design B: a =  0.485 b =  0.790 c' = -0.398 ab =  0.383 (Sobel z = 29.5) c = -0
+> .015 (t = -0.8)
+
+. 
+. di _n "Identity checks (should be zero to machine precision):"
+
+Identity checks (should be zero to machine precision):
+
+. foreach d in A B {
+  2.     di "  Design `d': c - (c' + ab) = " %12.8f (c`d' - (cp`d' + ab`d'))
+  3.     assert abs(c`d' - (cp`d' + ab`d')) < 1e-6
+  4. }
+  Design A: c - (c' + ab) =  -0.00000000
+  Design B: c - (c' + ab) =  -0.00000000
+
+. 
+. * ---- Path analysis by maximum likelihood (Stata's sem) gives the same paths
+>  ----
+. sem (m <- x) (yA <- x m)
+
+Endogenous variables
+  Observed: m yA
+
+Exogenous variables
+  Observed: x
+
+Fitting target model:
+Iteration 0:  Log likelihood =   -21360.1  
+Iteration 1:  Log likelihood =   -21360.1  
+
+Structural equation model                                Number of obs = 5,000
+Estimation method: ml
+
+Log likelihood = -21360.1
+
+------------------------------------------------------------------------------
+             |                 OIM
+             | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+Structural   |
+  m          |
+           x |   .4849122   .0139387    34.79   0.000     .4575929    .5122316
+       _cons |   .0019266   .0141196     0.14   0.891    -.0257474    .0296005
+  -----------+----------------------------------------------------------------
+  yA         |
+           m |   .7899997   .0142201    55.56   0.000     .7621288    .8178705
+           x |   .2019701     .01562    12.93   0.000     .1713556    .2325847
+       _cons |    .016457   .0141975     1.16   0.246    -.0113696    .0442835
+-------------+----------------------------------------------------------------
+     var(e.m)|   .9968162   .0199363                      .9584977    1.036667
+    var(e.yA)|   1.007837   .0201567                      .9690948    1.048128
+------------------------------------------------------------------------------
+LR test of model vs. saturated: chi2(0) = 0.00                 Prob > chi2 = .
+
+. scalar a_sem  = _b[m:x]
+
+. scalar b_sem  = _b[yA:m]
+
+. scalar cp_sem = _b[yA:x]
+
+. estat teffects
+
+
+Direct effects
+------------------------------------------------------------------------------
+             |                 OIM
+             | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+Structural   |
+  m          |
+           x |   .4849122   .0139387    34.79   0.000     .4575929    .5122316
+  -----------+----------------------------------------------------------------
+  yA         |
+           m |   .7899997   .0142201    55.56   0.000     .7621288    .8178705
+           x |   .2019701     .01562    12.93   0.000     .1713556    .2325847
+------------------------------------------------------------------------------
+
+
+Indirect effects
+------------------------------------------------------------------------------
+             |                 OIM
+             | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+Structural   |
+  m          |
+           x |          0  (no path)
+  -----------+----------------------------------------------------------------
+  yA         |
+           m |          0  (no path)
+           x |   .3830805   .0129924    29.48   0.000     .3576159    .4085451
+------------------------------------------------------------------------------
+
+
+Total effects
+------------------------------------------------------------------------------
+             |                 OIM
+             | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+Structural   |
+  m          |
+           x |   .4849122   .0139387    34.79   0.000     .4575929    .5122316
+  -----------+----------------------------------------------------------------
+  yA         |
+           m |   .7899997   .0142201    55.56   0.000     .7621288    .8178705
+           x |   .5850506   .0178239    32.82   0.000     .5501165    .6199847
+------------------------------------------------------------------------------
+
+. di _n "  sem a*b minus OLS ab (Design A)   = " %12.8f (a_sem*b_sem - abA)
+
+  sem a*b minus OLS ab (Design A)   =  -0.00000000
+
+. di    "  sem c' minus OLS c' (Design A)    = " %12.8f (cp_sem - cpA)
+  sem c' minus OLS c' (Design A)    =   0.00000000
+
+. assert abs(a_sem*b_sem - abA) < 1e-6
+
+. assert abs(cp_sem - cpA) < 1e-6
+
+. 
+. * ---- Numbers for the table ----
+. foreach s in a cpA bA cA abA sumA cpB bB cB abB sumB {
+  2.     local f`s' : di %4.2f `s'
+  3.     local f`s' = strtrim("`f`s''")
+  4. }
+
+. foreach s in at cpAt bAt cAt abzA cpBt bBt cBt abzB {
+  2.     local f`s' : di %3.1f `s'
+  3.     local f`s' = strtrim("`f`s''")
+  4. }
+
+. 
+. capture mkdir tables
+
+. file open tab using tables/tab_mediation_moderation_identity.tex, write repla
+> ce
+
+. file write tab "\begin{tabular}{@{}lcc@{}}" _n
+
+. file write tab "\toprule" _n
+
+. file write tab " & Design A & Design B \\" _n
+
+. file write tab "\midrule" _n
+
+. file write tab "\$a\$: \$M\$ on \$X\$ & `fa' (`fat') & `fa' (`fat') \\" _n
+
+. file write tab "\$b\$: \$Y\$ on \$M\$, \$X\$ held fixed & `fbA' (`fbAt') & `f
+> bB' (`fbBt') \\" _n
+
+. file write tab "\$c'\$: \$Y\$ on \$X\$, \$M\$ held fixed & `fcpA' (`fcpAt') &
+>  `fcpB' (`fcpBt') \\" _n
+
+. file write tab "\midrule" _n
+
+. file write tab "\$ab\$ (indirect) & `fabA' [`fabzA'] & `fabB' [`fabzB'] \\" _
+> n
+
+. file write tab "\$c' + ab\$ & \textcolor{DeepNavy}{\bfseries `fsumA'} & \text
+> color{DeepNavy}{\bfseries `fsumB'} \\" _n
+
+. file write tab "\$c\$: \$Y\$ on \$X\$ (total) & \textcolor{Maroon}{\bfseries 
+> `fcA'} (`fcAt') & \textcolor{Maroon}{\bfseries `fcB'} (`fcBt') \\" _n
+
+. file write tab "\bottomrule" _n
+
+. file write tab "\end{tabular}" _n
+
+. file close tab
+
+. type tables/tab_mediation_moderation_identity.tex
+\begin{tabular}{@{}lcc@{}}
+\toprule
+ & Design A & Design B \\
+\midrule
+$a$: $M$ on $X$ & 0.48 (34.8) & 0.48 (34.8) \\
+$b$: $Y$ on $M$, $X$ held fixed & 0.79 (55.5) & 0.79 (55.5) \\
+$c'$: $Y$ on $X$, $M$ held fixed & 0.20 (12.9) & -0.40 (-25.5) \\
+\midrule
+$ab$ (indirect) & 0.38 [29.5] & 0.38 [29.5] \\
+$c' + ab$ & \textcolor{DeepNavy}{\bfseries 0.59} & \textcolor{DeepNavy}{\bfseri
+> es -0.01} \\
+$c$: $Y$ on $X$ (total) & \textcolor{Maroon}{\bfseries 0.59} (32.8) & \textcolo
+> r{Maroon}{\bfseries -0.01} (-0.8) \\
+\bottomrule
+\end{tabular}
+
+. 
+. di "Done: tables/tab_mediation_moderation_identity.tex"
+Done: tables/tab_mediation_moderation_identity.tex
+
+. 
+. 
+. *****************************************************************************
+> ***
+. * MODULE 2: the sampling distribution of ab is skewed; Sobel versus percentil
+> e bootstrap intervals
+. *****************************************************************************
+> ***
+. *****************************************************************************
+> ***
+. * ACCTG 597A -- Week 6 (mediation and moderation module)
+. * The indirect effect ab is a product of two coefficients, so its sampling
+. * distribution is skewed in samples of the size common in practice. A
+. * normal-theory (Sobel) interval is symmetric around ab-hat and covers the
+. * true value less often than its nominal rate; a percentile bootstrap interva
+> l
+. * follows the shape of the sampling distribution.
+. *
+. * Part 1: Monte Carlo, 5,000 samples of N = 100 from
+. *   M = 0.25 X + e_M,  Y = 0.10 X + 0.25 M + e_Y,  all shocks standard normal
+> ,
+. * so ab = 0.0625. In every sample: the Sobel interval ab-hat +/- 1.96 s.e.
+. * and a percentile bootstrap interval from 1,000 resamples (computed in Mata
+. * for speed). Records the skewness of ab-hat and the coverage and rejection
+. * rate of both intervals. The figure draws the Monte Carlo distribution of
+. * ab-hat with the normal density implied by the mean Sobel s.e.
+. * Part 2: one further sample; the same bootstrap with Stata's bootstrap
+. * command, which is the recipe a researcher would use on real data.
+. * Checks: the Monte Carlo mean of ab-hat is within three Monte Carlo standard
+. * errors of ab; the bootstrap command's point estimate equals the sample ab.
+. * Requirements: base Stata. Output: figures/fig2_mediation_moderation_bootstr
+> ap.png
+. *****************************************************************************
+> ***
+. 
+. clear all
+
+. set seed 2017
+
+. 
+. local R  = 5000
+
+. local B  = 1000
+
+. local N  = 100
+
+. local a  = 0.25
+
+. local b  = 0.25
+
+. local cp = 0.10
+
+. local ab = `a'*`b'
+
+. 
+. * ---- Percentile bootstrap of ab, written in Mata so that 5,000 x 1,000 fits
+>  in minutes ----
+. mata:
+------------------------------------------------- mata (type end to exit) -----
+: real rowvector boot_ab(real colvector x, real colvector m, real colvector y,
+>                        real scalar B)
+> {
+>     real scalar    N, r, k
+>     real colvector idx, xb, mb, yb, ab, ba, bb
+>     real matrix    X1, X2
+>     N  = rows(x)
+>     ab = J(B, 1, .)
+>     for (r = 1; r <= B; r++) {
+>         idx = ceil(N :* runiform(N, 1))          // resample rows with replac
+> ement
+>         xb = x[idx]; mb = m[idx]; yb = y[idx]
+>         X1 = (J(N, 1, 1), xb)                     // M on X
+>         ba = invsym(cross(X1, X1)) * cross(X1, mb)
+>         X2 = (J(N, 1, 1), xb, mb)                 // Y on X and M
+>         bb = invsym(cross(X2, X2)) * cross(X2, yb)
+>         ab[r] = ba[2] * bb[3]
+>     }
+>     _sort(ab, 1)
+>     k = 0.025 * B                                 // 2.5th and 97.5th percent
+> iles
+>     return(((ab[k] + ab[k + 1]) / 2, (ab[B - k] + ab[B - k + 1]) / 2))
+> }
+
+: end
+-------------------------------------------------------------------------------
+
+. 
+. * ---- Part 1: the sampling distribution of ab-hat and two intervals ----
+. tempname mc
+
+. postfile `mc' rep a_hat b_hat ab_hat sobel bl bu using mc_ab, replace
+(file mc_ab.dta not found)
+
+. forvalues r = 1/`R' {
+  2.     quietly {
+  3.         clear
+  4.         set obs `N'
+  5.         gen x = rnormal()
+  6.         gen m = `a'*x + rnormal()
+  7.         gen y = `cp'*x + `b'*m + rnormal()
+  8.         reg m x
+  9.         local ah  = _b[x]
+ 10.         local ase = _se[x]
+ 11.         reg y x m
+ 12.         local bh  = _b[m]
+ 13.         local bse = _se[m]
+ 14.         mata: st_matrix("ci", boot_ab(st_data(., "x"), st_data(., "m"), st
+> _data(., "y"), `B'))
+ 15.         post `mc' (`r') (`ah') (`bh') ((`ah')*(`bh')) (sqrt((`bh')^2*(`ase
+> ')^2 + (`ah')^2*(`bse')^2)) (ci[1,1]) (ci[1,2])
+ 16.     }
+ 17. }
+
+. postclose `mc'
+
+. 
+. use mc_ab, clear
+
+. count if missing(sobel) | missing(bl) | missing(bu)
+  0
+
+. di "Samples with a missing interval (should be 0): " r(N)
+Samples with a missing interval (should be 0): 0
+
+. assert r(N) == 0
+
+. gen cov_sobel = (ab_hat - 1.96*sobel <= `ab') & (`ab' <= ab_hat + 1.96*sobel)
+
+. gen cov_boot  = (bl <= `ab') & (`ab' <= bu)
+
+. gen rej_sobel = abs(ab_hat/sobel) > 1.96
+
+. gen rej_boot  = (bl > 0) | (bu < 0)
+
+. sum ab_hat, detail
+
+                           ab_hat
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%    -.0043555      -.0526288
+ 5%     .0108809      -.0350349
+10%     .0191188      -.0316731       Obs               5,000
+25%     .0356614      -.0297152       Sum of wgt.       5,000
+
+50%     .0575088                      Mean            .062851
+                        Largest       Std. dev.      .0379323
+75%     .0844264       .2223097
+90%     .1142678       .2242013       Variance       .0014389
+95%     .1348395       .2445567       Skewness       .7822169
+99%     .1705399       .2549804       Kurtosis       3.804381
+
+. scalar mc_mean = r(mean)
+
+. scalar mc_sd   = r(sd)
+
+. scalar mc_skew = r(skewness)
+
+. sum sobel
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+       sobel |      5,000    .0374606    .0103189   .0038552   .0788762
+
+. scalar sobel_mean = r(mean)
+
+. sum cov_sobel
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+   cov_sobel |      5,000       .9196    .2719387          0          1
+
+. scalar S_cov = r(mean)
+
+. sum cov_boot
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    cov_boot |      5,000       .9426    .2326286          0          1
+
+. scalar B_cov = r(mean)
+
+. sum rej_sobel
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+   rej_sobel |      5,000       .2454    .4303671          0          1
+
+. scalar S_rej = r(mean)
+
+. sum rej_boot
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    rej_boot |      5,000       .4446    .4969711          0          1
+
+. scalar B_rej = r(mean)
+
+. 
+. di _n "Monte Carlo, `R' samples of N = `N': true ab = " %7.4f `ab'
+
+Monte Carlo, 5000 samples of N = 100: true ab =  0.0625
+
+. di    "  mean ab-hat        = " %7.4f mc_mean "   (Monte Carlo s.e. of the me
+> an " %7.4f mc_sd/sqrt(`R') ")"
+  mean ab-hat        =  0.0629   (Monte Carlo s.e. of the mean  0.0005)
+
+. di    "  s.d. of ab-hat     = " %7.4f mc_sd "   mean Sobel s.e. = " %7.4f sob
+> el_mean
+  s.d. of ab-hat     =  0.0379   mean Sobel s.e. =  0.0375
+
+. di    "  skewness of ab-hat = " %6.3f mc_skew "   (a normal distribution has 
+> skewness 0)"
+  skewness of ab-hat =  0.782   (a normal distribution has skewness 0)
+
+. di    "  95 percent interval coverage:  Sobel " %6.3f S_cov "   percentile bo
+> otstrap " %6.3f B_cov
+  95 percent interval coverage:  Sobel  0.920   percentile bootstrap  0.943
+
+. di    "  rejection rate (interval excludes 0):  Sobel " %6.3f S_rej "   perce
+> ntile bootstrap " %6.3f B_rej
+  rejection rate (interval excludes 0):  Sobel  0.245   percentile bootstrap  0
+> .445
+
+. di _n "Check: Monte Carlo mean within 3 s.e. of ab: " %8.5f abs(mc_mean - `ab
+> ') " < " %8.5f 3*mc_sd/sqrt(`R')
+
+Check: Monte Carlo mean within 3 s.e. of ab:  0.00035 <  0.00161
+
+. assert abs(mc_mean - `ab') < 3*mc_sd/sqrt(`R')
+
+. 
+. * ---- Figure: the Monte Carlo distribution of ab-hat against the normal ----
+. local fsk  : di %4.2f mc_skew
+
+. local fcs  : di %5.3f S_cov
+
+. local fcb  : di %5.3f B_cov
+
+. local fsd  : di %5.3f mc_sd
+
+. foreach s in fsk fcs fcb fsd {
+  2.     local `s' = strtrim("``s''")
+  3. }
+
+. local ytop = 1.20/(sobel_mean*sqrt(2*_pi))
+
+. capture mkdir figures
+
+. twoway (histogram ab_hat, width(0.008) color(navy%55) lcolor(white) lwidth(vt
+> hin))               ///
+>        (function normalden(x, `ab', sobel_mean), range(-0.08 0.22) lcolor(mar
+> oon) lwidth(thick)), ///
+>     xline(`ab', lcolor(gs8) lwidth(medthick))                                
+>                      ///
+>     xline(0, lcolor(gs12) lpattern(dash))                                    
+>                      ///
+>     text(`=0.97*`ytop'' 0.152 "Monte Carlo distribution of ab-hat" "(`R' samp
+> les): skewness `fsk'", ///
+>          color(navy) size(medsmall) placement(e) justification(left))        
+>                      ///
+>     text(`=0.78*`ytop'' 0.152 "normal density with the mean" "Sobel s.e. (sym
+> metric around ab)",  ///
+>          color(maroon) size(medsmall) placement(e) justification(left))      
+>                      ///
+>     text(`=0.57*`ytop'' 0.152 "95 percent interval coverage:" "Sobel `fcs', p
+> ercentile bootstrap `fcb'", ///
+>          color(gs4) size(medsmall) placement(e) justification(left))         
+>                      ///
+>     xtitle("Indirect effect ab-hat") ytitle("Density")                       
+>                      ///
+>     xlabel(-0.05(0.05)0.20, format(%4.2f)) xscale(range(-0.08 0.30))         
+>                      ///
+>     ylabel(, angle(horizontal) nogrid) yscale(range(0 `=1.05*`ytop''))       
+>                      ///
+>     title("The sampling distribution of ab is skewed")                       
+>                      ///
+>     subtitle("5,000 simulated samples of N = 100 (seed 2017); solid vertical 
+> line at the true ab = 0.0625", size(small)) ///
+>     legend(off) scheme(s1color) xsize(9) ysize(5)
+
+. graph export figures/fig2_mediation_moderation_bootstrap.png, replace width(2
+> 000)
+file figures/fig2_mediation_moderation_bootstrap.png written in PNG format
+
+. 
+. * ---- Part 2: the recipe on one sample, with Stata's bootstrap command ----
+. clear
+
+. set obs `N'
+Number of observations (_N) was 0, now 100.
+
+. gen x = rnormal()
+
+. gen m = `a'*x + rnormal()
+
+. gen y = `cp'*x + `b'*m + rnormal()
+
+. reg m x
+
+      Source |       SS           df       MS      Number of obs   =       100
+-------------+----------------------------------   F(1, 98)        =      4.21
+       Model |  5.52313268         1  5.52313268   Prob > F        =    0.0428
+    Residual |  128.524195        98  1.31147138   R-squared       =    0.0412
+-------------+----------------------------------   Adj R-squared   =    0.0314
+       Total |  134.047327        99  1.35401341   Root MSE        =    1.1452
+
+------------------------------------------------------------------------------
+           m | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           x |   .2346022   .1143191     2.05   0.043     .0077397    .4614647
+       _cons |   .0190057   .1159653     0.16   0.870    -.2111237    .2491351
+------------------------------------------------------------------------------
+
+. scalar a1   = _b[x]
+
+. scalar a1se = _se[x]
+
+. reg y x m
+
+      Source |       SS           df       MS      Number of obs   =       100
+-------------+----------------------------------   F(2, 97)        =     10.85
+       Model |   18.434828         2    9.217414   Prob > F        =    0.0001
+    Residual |  82.4070185        97  .849556891   R-squared       =    0.1828
+-------------+----------------------------------   Adj R-squared   =    0.1660
+       Total |  100.841846        99  1.01860451   Root MSE        =    .92171
+
+------------------------------------------------------------------------------
+           y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           x |   .2890635   .0939663     3.08   0.003     .1025663    .4755606
+           m |   .2277083   .0813025     2.80   0.006     .0663454    .3890712
+       _cons |   -.058788   .0933479    -0.63   0.530    -.2440577    .1264817
+------------------------------------------------------------------------------
+
+. scalar b1   = _b[m]
+
+. scalar b1se = _se[m]
+
+. scalar ab1  = a1*b1
+
+. scalar sob1 = sqrt(b1^2*a1se^2 + a1^2*b1se^2)
+
+. 
+. capture program drop indirect
+
+. program define indirect, rclass
+  1.     reg m x
+  2.     local ah = _b[x]
+  3.     reg y x m
+  4.     return scalar ab = `ah'*_b[m]
+  5. end
+
+. bootstrap ab = r(ab), reps(`B') saving(bs_ab, replace) nowarn nodots: indirec
+> t
+(file bs_ab.dta not found)
+
+Bootstrap results                                        Number of obs =   100
+                                                         Replications  = 1,000
+
+      Command: indirect
+           ab: r(ab)
+
+------------------------------------------------------------------------------
+             |   Observed   Bootstrap                         Normal-based
+             | coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          ab |   .0534209   .0286039     1.87   0.062    -.0026418    .1094835
+------------------------------------------------------------------------------
+
+. estat bootstrap, percentile
+
+Bootstrap results                               Number of obs     =        100
+                                                Replications      =       1000
+
+      Command: indirect
+           ab: r(ab)
+
+------------------------------------------------------------------------------
+             |    Observed               Bootstrap
+             | coefficient       Bias    std. err.  [95% conf. interval]
+-------------+----------------------------------------------------------------
+          ab |   .05342087  -.0015861   .02860394    .0022463    .117377   (P)
+------------------------------------------------------------------------------
+Key: P: Percentile
+
+. scalar ab_bs = _b[ab]
+
+. di _n "Check: bootstrap point estimate minus sample ab = " %12.8f (ab_bs - ab
+> 1)
+
+Check: bootstrap point estimate minus sample ab =  -0.00000000
+
+. assert abs(ab_bs - ab1) < 1e-6
+
+. use bs_ab, clear
+(bootstrap: indirect)
+
+. _pctile ab, p(2.5 97.5)
+
+. di _n "One sample, N = `N': ab = " %7.4f ab1 "   Sobel interval [" %7.4f ab1 
+> - 1.96*sob1 ", " %7.4f ab1 + 1.96*sob1 "]" ///
+>       "   percentile bootstrap interval [" %7.4f r(r1) ", " %7.4f r(r2) "]"
+
+One sample, N = 100: ab =  0.0534   Sobel interval [-0.0098,  0.1167]   percent
+> ile bootstrap interval [ 0.0022,  0.1174]
+
+. 
+. capture erase mc_ab.dta
+
+. capture erase bs_ab.dta
+
+. di "Done: figures/fig2_mediation_moderation_bootstrap.png"
+Done: figures/fig2_mediation_moderation_bootstrap.png
+
+. 
+. 
+. *****************************************************************************
+> ***
+. * MODULE 3: the conditional effect b1 + b3 W, centering, Johnson-Neyman bound
+> aries, and a median split
+. *****************************************************************************
+> ***
+. *****************************************************************************
+> ***
+. * ACCTG 597A -- Week 6 (mediation and moderation module)
+. * In a moderation model Y = b1 X + b2 W + b3 XW + e, the effect of X on Y is
+. * the conditional effect theta(W) = b1 + b3 W: b1 is the effect at W = 0, and
+. * the Johnson-Neyman boundaries are the values of W where the conditional
+. * effect's t statistic equals the critical value.
+. *
+. * Pure simulation, N = 500, X and W standard normal:
+. *   Y = 0.15 X + 0.30 W + 0.25 X W + e,   e standard normal,
+. * so theta(W) = 0.15 + 0.25 W, zero at W = -0.6.
+. * Checks: mean-centered b1 equals b1 + b3 Wbar and b3 is unchanged (1e-6);
+. * at each Johnson-Neyman root, absolute theta divided by its s.e. equals the
+. * critical t (1e-6); lincom at W = 0 reproduces b1.
+. * Also compares a median split of W (two subgroup slopes) with the b3 test.
+. * Requirements: base Stata. Output: figures/fig3_mediation_moderation_conditi
+> onal.png,
+. *   tables/tab_mediation_moderation_probe.tex
+. *****************************************************************************
+> ***
+. 
+. clear all
+
+. set seed 2017
+
+. 
+. set obs 500
+Number of observations (_N) was 0, now 500.
+
+. gen x  = rnormal()
+
+. gen w  = rnormal()
+
+. gen xw = x*w
+
+. gen y  = 0.15*x + 0.30*w + 0.25*xw + rnormal()
+
+. 
+. * ---- The moderation regression ----
+. reg y x w xw
+
+      Source |       SS           df       MS      Number of obs   =       500
+-------------+----------------------------------   F(3, 496)       =     29.58
+       Model |  92.2344584         3  30.7448195   Prob > F        =    0.0000
+    Residual |  515.596793       496  1.03950966   R-squared       =    0.1517
+-------------+----------------------------------   Adj R-squared   =    0.1466
+       Total |  607.831252       499   1.2180987   Root MSE        =    1.0196
+
+------------------------------------------------------------------------------
+           y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           x |   .1544008   .0443577     3.48   0.001     .0672487    .2415529
+           w |   .2260694   .0478705     4.72   0.000     .1320156    .3201233
+          xw |   .3076823   .0457671     6.72   0.000      .217761    .3976035
+       _cons |   .0033461   .0458213     0.07   0.942    -.0866816    .0933738
+------------------------------------------------------------------------------
+
+. scalar b1  = _b[x]
+
+. scalar b2  = _b[w]
+
+. scalar b3  = _b[xw]
+
+. scalar b1t = _b[x]/_se[x]
+
+. scalar b3t = _b[xw]/_se[xw]
+
+. scalar tcrit = invttail(e(df_r), 0.025)
+
+. matrix V = e(V)
+
+. scalar v11 = V[1,1]
+
+. scalar v33 = V[3,3]
+
+. scalar v13 = V[1,3]
+
+. 
+. * ---- Pick-a-point: theta(W) at W = -1, 0, +1 (standard deviations of W) ---
+> -
+. foreach k in -1 0 1 {
+  2.     local kk = cond(`k' < 0, "m1", cond(`k' == 0, "0", "p1"))
+  3.     lincom x + (`k')*xw
+  4.     scalar th`kk'  = r(estimate)
+  5.     scalar th`kk't = r(estimate)/r(se)
+  6. }
+
+ ( 1)  x - xw = 0
+
+------------------------------------------------------------------------------
+           y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         (1) |  -.1532815   .0642635    -2.39   0.017    -.2795436   -.0270193
+------------------------------------------------------------------------------
+
+ ( 1)  x = 0
+
+------------------------------------------------------------------------------
+           y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         (1) |   .1544008   .0443577     3.48   0.001     .0672487    .2415529
+------------------------------------------------------------------------------
+
+ ( 1)  x + xw = 0
+
+------------------------------------------------------------------------------
+           y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         (1) |   .4620831   .0632034     7.31   0.000     .3379037    .5862624
+------------------------------------------------------------------------------
+
+. di _n "Check: lincom at W = 0 minus b1 = " %12.8f (th0 - b1)
+
+Check: lincom at W = 0 minus b1 =   0.00000000
+
+. assert abs(th0 - b1) < 1e-6
+
+. 
+. * ---- Mean centering relabels b1 and leaves b3 unchanged ----
+. sum w
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+           w |        500    .0298393    .9632573  -2.359229   2.502254
+
+. scalar wbar = r(mean)
+
+. gen wc  = w - wbar
+
+. gen xwc = x*wc
+
+. reg y x wc xwc
+
+      Source |       SS           df       MS      Number of obs   =       500
+-------------+----------------------------------   F(3, 496)       =     29.58
+       Model |  92.2344572         3  30.7448191   Prob > F        =    0.0000
+    Residual |  515.596794       496  1.03950967   R-squared       =    0.1517
+-------------+----------------------------------   Adj R-squared   =    0.1466
+       Total |  607.831252       499   1.2180987   Root MSE        =    1.0196
+
+------------------------------------------------------------------------------
+           y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           x |   .1635818    .044356     3.69   0.000     .0764331    .2507306
+          wc |   .2260694   .0478705     4.72   0.000     .1320156    .3201233
+         xwc |   .3076823   .0457671     6.72   0.000      .217761    .3976035
+       _cons |   .0100919   .0457858     0.22   0.826    -.0798661    .1000499
+------------------------------------------------------------------------------
+
+. scalar b1c = _b[x]
+
+. scalar b3c = _b[xwc]
+
+. di "Check: centered b1 - (b1 + b3 Wbar) = " %12.8f (b1c - (b1 + b3*wbar))
+Check: centered b1 - (b1 + b3 Wbar) =   0.00000000
+
+. di "Check: b3 - centered b3            = " %12.8f (b3 - b3c)
+Check: b3 - centered b3            =   0.00000001
+
+. assert abs(b1c - (b1 + b3*wbar)) < 1e-6
+
+. assert abs(b3 - b3c) < 1e-6
+
+. 
+. * ---- Johnson-Neyman boundaries: (b1 + b3 W)^2 = t^2 Var(b1 + b3 W) ----
+. scalar qA = b3^2 - tcrit^2*v33
+
+. scalar qB = 2*(b1*b3 - tcrit^2*v13)
+
+. scalar qC = b1^2 - tcrit^2*v11
+
+. scalar disc = qB^2 - 4*qA*qC
+
+. assert disc > 0
+
+. scalar wjn1 = (-qB - sqrt(disc))/(2*qA)
+
+. scalar wjn2 = (-qB + sqrt(disc))/(2*qA)
+
+. scalar wlo = min(wjn1, wjn2)
+
+. scalar whi = max(wjn1, wjn2)
+
+. foreach r in lo hi {
+  2.     scalar th_`r' = b1 + b3*w`r'
+  3.     scalar se_`r' = sqrt(v11 + 2*w`r'*v13 + w`r'^2*v33)
+  4.     di "Check: at W = " %6.3f w`r' ", absolute t minus critical t = " %12.
+> 8f (abs(th_`r')/se_`r' - tcrit)
+  5.     assert abs(abs(th_`r')/se_`r' - tcrit) < 1e-6
+  6. }
+Check: at W = -0.889, absolute t minus critical t =  -0.00000000
+Check: at W = -0.211, absolute t minus critical t =  -0.00000000
+
+. di _n "b1 = " %6.3f b1 " (t = " %4.1f b1t "), b3 = " %6.3f b3 " (t = " %4.1f 
+> b3t "), critical t = " %6.4f tcrit
+
+b1 =  0.154 (t =  3.5), b3 =  0.308 (t =  6.7), critical t = 1.9648
+
+. di    "theta(-1) = " %6.3f thm1 " (t = " %4.1f thm1t "); theta(0) = " %6.3f t
+> h0 " (t = " %4.1f th0t "); theta(+1) = " %6.3f thp1 " (t = " %4.1f thp1t ")"
+theta(-1) = -0.153 (t = -2.4); theta(0) =  0.154 (t =  3.5); theta(+1) =  0.462
+>  (t =  7.3)
+
+. di    "Johnson-Neyman boundaries: W = " %6.3f wlo " and W = " %6.3f whi
+Johnson-Neyman boundaries: W = -0.889 and W = -0.211
+
+. di    "  theta(W) differs from zero for W < " %6.3f wlo " (negative) and W > 
+> " %6.3f whi " (positive)"
+  theta(W) differs from zero for W < -0.889 (negative) and W > -0.211 (positive
+> )
+
+. 
+. * ---- A median split of W is not a test of b3 ----
+. sum w, detail
+
+                              w
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%    -2.184078      -2.359229
+ 5%    -1.457417      -2.295331
+10%    -1.219772      -2.295126       Obs                 500
+25%    -.6373848      -2.231771       Sum of wgt.         500
+
+50%    -.0033919                      Mean           .0298393
+                        Largest       Std. dev.      .9632573
+75%     .6926469       2.330297
+90%     1.326412       2.375214       Variance       .9278646
+95%     1.712968       2.442833       Skewness       .1179192
+99%     2.305773       2.502254       Kurtosis       2.662172
+
+. scalar wmed = r(p50)
+
+. reg y x if w <= wmed
+
+      Source |       SS           df       MS      Number of obs   =       250
+-------------+----------------------------------   F(1, 248)       =      0.90
+       Model |  1.06978426         1  1.06978426   Prob > F        =    0.3444
+    Residual |  295.661849       248  1.19218488   R-squared       =    0.0036
+-------------+----------------------------------   Adj R-squared   =   -0.0004
+       Total |  296.731633       249  1.19169331   Root MSE        =    1.0919
+
+------------------------------------------------------------------------------
+           y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           x |  -.0629823   .0664878    -0.95   0.344     -.193935    .0679705
+       _cons |  -.1382288    .069395    -1.99   0.047    -.2749075   -.0015501
+------------------------------------------------------------------------------
+
+. scalar s_lo   = _b[x]
+
+. scalar s_lot  = _b[x]/_se[x]
+
+. scalar s_lose = _se[x]
+
+. reg y x if w > wmed
+
+      Source |       SS           df       MS      Number of obs   =       250
+-------------+----------------------------------   F(1, 248)       =     34.24
+       Model |   36.281966         1   36.281966   Prob > F        =    0.0000
+    Residual |  262.803941       248  1.05969331   R-squared       =    0.1213
+-------------+----------------------------------   Adj R-squared   =    0.1178
+       Total |  299.085907       249  1.20114822   Root MSE        =    1.0294
+
+------------------------------------------------------------------------------
+           y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           x |   .3738506   .0638914     5.85   0.000     .2480115    .4996896
+       _cons |   .1417336   .0652303     2.17   0.031     .0132576    .2702096
+------------------------------------------------------------------------------
+
+. scalar s_hi   = _b[x]
+
+. scalar s_hit  = _b[x]/_se[x]
+
+. scalar s_hise = _se[x]
+
+. scalar dz = (s_hi - s_lo)/sqrt(s_hise^2 + s_lose^2)
+
+. di _n "Median split: slope of X below median W = " %6.3f s_lo " (t = " %4.1f 
+> s_lot ")"
+
+Median split: slope of X below median W = -0.063 (t = -0.9)
+
+. di    "              slope of X above median W = " %6.3f s_hi " (t = " %4.1f 
+> s_hit ")"
+              slope of X above median W =  0.374 (t =  5.9)
+
+. di    "              difference z = " %4.1f dz "   versus b3 t = " %4.1f b3t
+              difference z =  4.7   versus b3 t =  6.7
+
+. 
+. * ---- Table ----
+. foreach s in thm1 th0 thp1 wlo whi s_lo s_hi b3 {
+  2.     local f`s' : di %4.2f `s'
+  3.     local f`s' = strtrim("`f`s''")
+  4. }
+
+. foreach s in thm1t th0t thp1t s_lot s_hit dz b3t {
+  2.     local f`s' : di %3.1f `s'
+  3.     local f`s' = strtrim("`f`s''")
+  4. }
+
+. capture mkdir tables
+
+. file open tab using tables/tab_mediation_moderation_probe.tex, write replace
+
+. file write tab "\begin{tabular}{@{}lcc@{}}" _n
+
+. file write tab "\toprule" _n
+
+. file write tab " & Effect of \$X\$ & \$t\$ \\" _n
+
+. file write tab "\midrule" _n
+
+. file write tab "\$\theta(W)\$ at \$W = -1\$ & `fthm1' & `fthm1t' \\" _n
+
+. file write tab "\$\theta(W)\$ at \$W = 0\$ (\$= b_1\$) & `fth0' & `fth0t' \\"
+>  _n
+
+. file write tab "\$\theta(W)\$ at \$W = +1\$ & `fthp1' & `fthp1t' \\" _n
+
+. file write tab "Johnson-Neyman boundaries & \textcolor{Maroon}{\bfseries \$W 
+> = `fwlo'\$, \$`fwhi'\$} & \\" _n
+
+. file write tab "\midrule" _n
+
+. file write tab "Median split: \$W\$ below median & `fs_lo' & `fs_lot' \\" _n
+
+. file write tab "Median split: \$W\$ above median & `fs_hi' & `fs_hit' \\" _n
+
+. file write tab "Difference of subgroup slopes & & `fdz' \\" _n
+
+. file write tab "\$b_3\$ (interaction) & \textcolor{DeepNavy}{\bfseries `fb3'}
+>  & \textcolor{DeepNavy}{\bfseries `fb3t'} \\" _n
+
+. file write tab "\bottomrule" _n
+
+. file write tab "\end{tabular}" _n
+
+. file close tab
+
+. type tables/tab_mediation_moderation_probe.tex
+\begin{tabular}{@{}lcc@{}}
+\toprule
+ & Effect of $X$ & $t$ \\
+\midrule
+$\theta(W)$ at $W = -1$ & -0.15 & -2.4 \\
+$\theta(W)$ at $W = 0$ ($= b_1$) & 0.15 & 3.5 \\
+$\theta(W)$ at $W = +1$ & 0.46 & 7.3 \\
+Johnson-Neyman boundaries & \textcolor{Maroon}{\bfseries $W = -0.89$, $-0.21$} 
+> & \\
+\midrule
+Median split: $W$ below median & -0.06 & -0.9 \\
+Median split: $W$ above median & 0.37 & 5.9 \\
+Difference of subgroup slopes & & 4.7 \\
+$b_3$ (interaction) & \textcolor{DeepNavy}{\bfseries 0.31} & \textcolor{DeepNav
+> y}{\bfseries 6.7} \\
+\bottomrule
+\end{tabular}
+
+. 
+. * ---- Figure: the conditional effect with its band and the JN boundaries ---
+> -
+. local fb1 : di %4.2f b1
+
+. local fb3 : di %4.2f b3
+
+. local fb1 = strtrim("`fb1'")
+
+. local fb3 = strtrim("`fb3'")
+
+. clear
+
+. set obs 101
+Number of observations (_N) was 0, now 101.
+
+. gen s  = -2.5 + 5*(_n - 1)/100
+
+. gen me = b1 + b3*s
+
+. gen se = sqrt(v11 + 2*s*v13 + s^2*v33)
+
+. gen lo = me - tcrit*se
+
+. gen hi = me + tcrit*se
+
+. gen mid = (s >= wlo & s <= whi)
+
+. 
+. capture mkdir figures
+
+. twoway (rarea lo hi s if !mid, color(navy%15) lwidth(none))                  
+>          ///
+>        (rarea lo hi s if mid, color(gs14%60) lwidth(none))                   
+>           ///
+>        (line me s, lcolor(navy) lwidth(thick)),                              
+>           ///
+>     yline(0, lcolor(gs8) lpattern(dash))                                     
+>           ///
+>     xline(`=wlo' `=whi', lcolor(maroon) lpattern(shortdash) lwidth(medthick))
+>           ///
+>     text(-0.45 0.3 "{&theta}(W) = b{sub:1} + b{sub:3} W = `fb1' + `fb3' W", c
+> olor(navy) size(medium) placement(e)) ///
+>     text(0.62 `=(wlo+whi)/2' "{&theta}(W) not" "different" "from zero", color
+> (gs5) size(small)) ///
+>     text(-0.72 `=wlo-0.08' "W = `fwlo'", color(maroon) size(medsmall) placeme
+> nt(w))     ///
+>     text(-0.72 `=whi+0.08' "W = `fwhi'", color(maroon) size(medsmall) placeme
+> nt(e))     ///
+>     text(-0.98 `=whi+0.08' "Johnson-Neyman boundaries", color(maroon) size(me
+> dsmall) placement(e)) ///
+>     xtitle("Moderator W (standard deviations)") ytitle("Conditional effect of
+>  X on Y")  ///
+>     xlabel(-2(1)2) ylabel(-1(0.5)1, angle(horizontal) format(%3.1f))         
+>            ///
+>     yscale(range(-1.1 1.1))                                                  
+>           ///
+>     title("The effect of X on Y is a function of W")                         
+>           ///
+>     subtitle("Simulated data (seed 2017), N = 500; band is a 95 percent confi
+> dence interval") ///
+>     legend(off) scheme(s1color) xsize(9) ysize(5)
+
+. graph export figures/fig3_mediation_moderation_conditional.png, replace width
+> (2000)
+file figures/fig3_mediation_moderation_conditional.png written in PNG format
+
+. 
+. di "Done: figures/fig3_mediation_moderation_conditional.png"
+Done: figures/fig3_mediation_moderation_conditional.png
+
+. 
+. 
+. *****************************************************************************
+> ***
+. * MODULE 4: moderated mediation, the conditional indirect effect, and the ind
+> ex a3 b
+. *****************************************************************************
+> ***
+. *****************************************************************************
+> ***
+. * ACCTG 597A -- Week 6 (mediation and moderation module)
+. * Moderated mediation: when W moderates the a path, the indirect effect of X
+. * on Y through M is a function of W, omega(W) = (a1 + a3 W) b, and the index
+. * of moderated mediation a3 b is its slope.
+. *
+. * Pure simulation, N = 500, X and W standard normal:
+. *   M = 0.5 X + 0.2 W + 0.3 X W + e_M
+. *   Y = 0.2 X + 0.6 M + e_Y                 (W and XW enter the estimated Y
+. *                                            equation with true coefficients 
+> 0)
+. * so omega(W) = 0.30 + 0.18 W and the index is 0.18.
+. * Checks (1e-6): the reduced-form regression of Y on X, W, XW returns
+. * c1' + b a1 on X and c3' + b a3 on XW; omega(1) - omega(0) equals a3 b.
+. * Inference: 1,000 bootstrap resamples of (a1, a3, b); percentile band for
+. * omega(W) on a grid and a percentile interval for the index.
+. * Requirements: base Stata. Output: figures/fig4_mediation_moderation_modmed.
+> png
+. *****************************************************************************
+> ***
+. 
+. clear all
+
+. set seed 2017
+
+. 
+. set obs 500
+Number of observations (_N) was 0, now 500.
+
+. gen x  = rnormal()
+
+. gen w  = rnormal()
+
+. gen xw = x*w
+
+. gen m  = 0.5*x + 0.2*w + 0.3*xw + rnormal()
+
+. gen y  = 0.2*x + 0.6*m + rnormal()
+
+. 
+. * ---- The two path equations (PROCESS model 8 of Hayes 2013: W may moderate 
+> both a and c') ----
+. reg m x w xw
+
+      Source |       SS           df       MS      Number of obs   =       500
+-------------+----------------------------------   F(3, 496)       =     67.93
+       Model |  211.847151         3  70.6157171   Prob > F        =    0.0000
+    Residual |  515.596793       496  1.03950966   R-squared       =    0.2912
+-------------+----------------------------------   Adj R-squared   =    0.2869
+       Total |  727.443944       499  1.45780349   Root MSE        =    1.0196
+
+------------------------------------------------------------------------------
+           m | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           x |   .5044008   .0443577    11.37   0.000     .4172487    .5915529
+           w |   .1260694   .0478705     2.63   0.009     .0320156    .2201233
+          xw |   .3576823   .0457671     7.82   0.000      .267761    .4476035
+       _cons |   .0033461   .0458213     0.07   0.942    -.0866816    .0933738
+------------------------------------------------------------------------------
+
+. scalar a1 = _b[x]
+
+. scalar a2 = _b[w]
+
+. scalar a3 = _b[xw]
+
+. scalar a3t = _b[xw]/_se[xw]
+
+. reg y x w xw m
+
+      Source |       SS           df       MS      Number of obs   =       500
+-------------+----------------------------------   F(4, 495)       =    101.52
+       Model |  400.828186         4  100.207046   Prob > F        =    0.0000
+    Residual |  488.599034       495  .987068756   R-squared       =    0.4507
+-------------+----------------------------------   Adj R-squared   =    0.4462
+       Total |   889.42722       499  1.78241928   Root MSE        =    .99351
+
+------------------------------------------------------------------------------
+           y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           x |   .2732287   .0485326     5.63   0.000     .1778735    .3685839
+           w |    .043676   .0469724     0.93   0.353    -.0486137    .1359658
+          xw |     .01004    .047264     0.21   0.832    -.0828227    .1029027
+           m |   .6054168   .0437541    13.84   0.000     .5194502    .6913835
+       _cons |   -.014422   .0446508    -0.32   0.747    -.1021504    .0733064
+------------------------------------------------------------------------------
+
+. scalar c1 = _b[x]
+
+. scalar c2 = _b[w]
+
+. scalar c3 = _b[xw]
+
+. scalar b  = _b[m]
+
+. scalar bt = _b[m]/_se[m]
+
+. scalar om0   = a1*b
+
+. scalar index = a3*b
+
+. 
+. * ---- Identity checks against the reduced form ----
+. reg y x w xw
+
+      Source |       SS           df       MS      Number of obs   =       500
+-------------+----------------------------------   F(3, 496)       =     51.69
+       Model |  211.846731         3   70.615577   Prob > F        =    0.0000
+    Residual |  677.580489       496   1.3660897   R-squared       =    0.2382
+-------------+----------------------------------   Adj R-squared   =    0.2336
+       Total |   889.42722       499  1.78241928   Root MSE        =    1.1688
+
+------------------------------------------------------------------------------
+           y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           x |   .5786014   .0508504    11.38   0.000     .4786927    .6785101
+           w |   .1200006   .0548773     2.19   0.029     .0121799    .2278213
+          xw |   .2265869   .0524661     4.32   0.000     .1235037    .3296701
+       _cons |  -.0123962   .0525282    -0.24   0.814    -.1156014     .090809
+------------------------------------------------------------------------------
+
+. di _n "Identity checks (should be zero to machine precision):"
+
+Identity checks (should be zero to machine precision):
+
+. di "  reduced-form X  minus (c1' + b a1) = " %12.8f (_b[x] - (c1 + b*a1))
+  reduced-form X  minus (c1' + b a1) =  -0.00000000
+
+. di "  reduced-form XW minus (c3' + b a3) = " %12.8f (_b[xw] - (c3 + b*a3))
+  reduced-form XW minus (c3' + b a3) =   0.00000000
+
+. di "  reduced-form W  minus (c2' + b a2) = " %12.8f (_b[w] - (c2 + b*a2))
+  reduced-form W  minus (c2' + b a2) =  -0.00000000
+
+. assert abs(_b[x]  - (c1 + b*a1)) < 1e-6
+
+. assert abs(_b[xw] - (c3 + b*a3)) < 1e-6
+
+. assert abs(_b[w]  - (c2 + b*a2)) < 1e-6
+
+. di "  omega(1) - omega(0) minus a3 b     = " %12.8f (((a1 + a3)*b - a1*b) - i
+> ndex)
+  omega(1) - omega(0) minus a3 b     =   0.00000000
+
+. assert abs(((a1 + a3)*b - a1*b) - index) < 1e-6
+
+. 
+. di _n "a1 = " %6.3f a1 ", a3 = " %6.3f a3 " (t = " %4.1f a3t "), b = " %6.3f 
+> b " (t = " %4.1f bt ")"
+
+a1 =  0.504, a3 =  0.358 (t =  7.8), b =  0.605 (t = 13.8)
+
+. di    "conditional indirect effect at W = 0: a1 b = " %6.3f om0
+conditional indirect effect at W = 0: a1 b =  0.305
+
+. di    "index of moderated mediation a3 b     = " %6.3f index
+index of moderated mediation a3 b     =  0.217
+
+. di    "conditional indirect effect at W = -1, 0, +1: " %6.3f (a1 - a3)*b ", "
+>  %6.3f om0 ", " %6.3f (a1 + a3)*b
+conditional indirect effect at W = -1, 0, +1:  0.089,  0.305,  0.522
+
+. 
+. * ---- Bootstrap the three path coefficients ----
+. capture program drop modmed
+
+. program define modmed, rclass
+  1.     reg m x w xw
+  2.     return scalar a1 = _b[x]
+  3.     return scalar a3 = _b[xw]
+  4.     reg y x w xw m
+  5.     return scalar b  = _b[m]
+  6. end
+
+. bootstrap a1 = r(a1) a3 = r(a3) b = r(b), reps(1000) saving(bs_mm, replace) n
+> owarn nodots: modmed
+(file bs_mm.dta not found)
+
+Bootstrap results                                        Number of obs =   500
+                                                         Replications  = 1,000
+
+      Command: modmed
+           a1: r(a1)
+           a3: r(a3)
+            b: r(b)
+
+------------------------------------------------------------------------------
+             |   Observed   Bootstrap                         Normal-based
+             | coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+          a1 |   .5044008   .0436517    11.56   0.000      .418845    .5899566
+          a3 |   .3576823   .0434174     8.24   0.000     .2725857    .4427789
+           b |   .6054168   .0432108    14.01   0.000     .5207252    .6901085
+------------------------------------------------------------------------------
+
+. di _n "Check: bootstrap point estimates equal the sample estimates: " ///
+>       %12.8f (_b[a1] - a1) " " %12.8f (_b[a3] - a3) " " %12.8f (_b[b] - b)
+
+Check: bootstrap point estimates equal the sample estimates:   0.00000000   0.0
+> 0000000   0.00000000
+
+. assert abs(_b[a1] - a1) < 1e-6 & abs(_b[a3] - a3) < 1e-6 & abs(_b[b] - b) < 1
+> e-6
+
+. 
+. use bs_mm, clear
+(bootstrap: modmed)
+
+. rename (a1 a3 b) (a1_bs a3_bs b_bs)   // avoid shadowing the scalars a1, a3, 
+> b
+
+. gen idx_bs = a3_bs*b_bs
+
+. _pctile idx_bs, p(2.5 97.5)
+
+. scalar ixl = r(r1)
+
+. scalar ixu = r(r2)
+
+. di "index of moderated mediation: " %6.3f index "   percentile 95 percent int
+> erval [" %6.3f ixl ", " %6.3f ixu "]"
+index of moderated mediation:  0.217   percentile 95 percent interval [ 0.159, 
+>  0.284]
+
+. 
+. * percentile band for omega(W) on a grid
+. tempname grid
+
+. postfile `grid' s om lo hi using om_grid, replace
+(file om_grid.dta not found)
+
+. forvalues k = 0/40 {
+  2.     local s = -2 + 4*`k'/40
+  3.     quietly {
+  4.         gen om_k = (a1_bs + a3_bs*`s')*b_bs
+  5.         _pctile om_k, p(2.5 97.5)
+  6.         post `grid' (`s') ((a1 + a3*`s')*b) (r(r1)) (r(r2))
+  7.         drop om_k
+  8.     }
+  9. }
+
+. postclose `grid'
+
+. use om_grid, clear
+
+. gen truth = 0.30 + 0.18*s
+
+. 
+. * ---- Figure ----
+. local fidx : di %4.2f index
+
+. local fixl : di %4.2f ixl
+
+. local fixu : di %4.2f ixu
+
+. local fom0 : di %4.2f om0
+
+. foreach s in fidx fixl fixu fom0 {
+  2.     local `s' = strtrim("``s''")
+  3. }
+
+. capture mkdir figures
+
+. twoway (rarea lo hi s, color(navy%15) lwidth(none))                          
+>             ///
+>        (line om s, lcolor(navy) lwidth(thick))                               
+>            ///
+>        (line truth s, lcolor(maroon) lpattern(dash) lwidth(medthick)),       
+>            ///
+>     yline(0, lcolor(gs8) lpattern(dash))                                     
+>            ///
+>     text(0.86 -1.95 "{&omega}(W) = (a{sub:1} + a{sub:3} W) b: estimate with 9
+> 5 percent band", color(navy) size(medium) placement(e)) ///
+>     text(0.74 -1.95 "index of moderated mediation a{sub:3} b = `fidx' [`fixl'
+> , `fixu']", color(navy) size(medium) placement(e)) ///
+>     text(-0.22 1.95 "true {&omega}(W) = 0.30 + 0.18 W", color(maroon) size(me
+> dium) placement(w)) ///
+>     xtitle("Moderator W (standard deviations)") ytitle("Indirect effect of X 
+> through M")   ///
+>     xlabel(-2(1)2) ylabel(-0.4(0.2)1, angle(horizontal) format(%3.1f))       
+>             ///
+>     yscale(range(-0.45 0.95))                                                
+>            ///
+>     title("The indirect effect through M rises with W")                      
+>            ///
+>     subtitle("Simulated data (seed 2017), N = 500; band is a 95 percent perce
+> ntile bootstrap interval (1,000 resamples)", size(small)) ///
+>     legend(off) scheme(s1color) xsize(9) ysize(5)
+
+. graph export figures/fig4_mediation_moderation_modmed.png, replace width(2000
+> )
+file figures/fig4_mediation_moderation_modmed.png written in PNG format
+
+. 
+. capture erase bs_mm.dta
+
+. capture erase om_grid.dta
+
+. di "Done: figures/fig4_mediation_moderation_modmed.png"
+Done: figures/fig4_mediation_moderation_modmed.png
+
+. 
+. 
+. *****************************************************************************
+> ***
+. * MODULE 5: the identity fixes the sum, not the split: a shared unobservable 
+> and measurement error in M
+. *****************************************************************************
+> ***
+. *****************************************************************************
+> ***
+. * ACCTG 597A -- Week 6 (mediation and moderation module)
+. * The decomposition c = c' + ab holds in every sample by construction; what
+. * moves is the split. An unobserved variable in both M and Y, or measurement
+. * error in M, reallocates the total between the direct and indirect paths
+. * while the total effect of an exogenous X stays unbiased.
+. *
+. * Monte Carlo, 500 samples of N = 2,000; X, U, all shocks standard normal.
+. *   Design A (clean):        M = 0.5 X + e_M,           Y = 0.2 X + 0.8 M + e
+> _Y
+. *   Design B (U in M and Y): M = 0.5 X + 0.6 U + e_M,   Y = 0.2 X + 0.8 M + 0
+> .6 U + e_Y
+. *   Design C (noisy M):      observed M* = M_A + u,      Y = Y_A
+. * True direct c' = 0.2, indirect ab = 0.4, total c = 0.6 in every design.
+. * Population OLS values (derived in mediation_moderation_derivations.py):
+. *   B: b -> 0.8 + 0.36/1.36 = 1.0647, ab -> 0.5324, c' -> 0.0676
+. *   C: b -> 0.8 x 0.5 = 0.40,         ab -> 0.2000, c' -> 0.4000
+. * Checks: c - (c' + ab) = 0 (1e-6) in every sample and design; Monte Carlo
+. * means within 0.01 of the population values.
+. * Requirements: base Stata. Output: figures/fig5_mediation_moderation_paths.p
+> ng
+. *****************************************************************************
+> ***
+. 
+. clear all
+
+. set seed 2012
+
+. 
+. local R = 500
+
+. local N = 2000
+
+. 
+. tempname pf
+
+. postfile `pf' rep dA iA cA dB iB cB dC iC cC viol using paths_mc, replace
+(file paths_mc.dta not found)
+
+. forvalues r = 1/`R' {
+  2.     quietly {
+  3.         clear
+  4.         set obs `N'
+  5.         gen x  = rnormal()
+  6.         gen u  = rnormal()
+  7.         gen em = rnormal()
+  8.         gen ey = rnormal()
+  9.         gen mn = rnormal()
+ 10.         gen mA = 0.5*x + em
+ 11.         gen yA = 0.2*x + 0.8*mA + ey
+ 12.         gen mB = 0.5*x + 0.6*u + em
+ 13.         gen yB = 0.2*x + 0.8*mB + 0.6*u + ey
+ 14.         gen mC = mA + mn
+ 15.         gen yC = yA
+ 16.         local viol = 0
+ 17.         foreach d in A B C {
+ 18.             reg m`d' x
+ 19.             local a  = _b[x]
+ 20.             reg y`d' x m`d'
+ 21.             local cp = _b[x]
+ 22.             local b  = _b[m`d']
+ 23.             reg y`d' x
+ 24.             local c  = _b[x]
+ 25.             local d`d' = `cp'
+ 26.             local i`d' = `a'*`b'
+ 27.             local c`d' = `c'
+ 28.             if abs(`c' - (`cp' + `a'*`b')) > 1e-6 local viol = `viol' + 1
+ 29.         }
+ 30.         post `pf' (`r') (`dA') (`iA') (`cA') (`dB') (`iB') (`cB') (`dC') (
+> `iC') (`cC') (`viol')
+ 31.     }
+ 32. }
+
+. postclose `pf'
+
+. 
+. use paths_mc, clear
+
+. sum viol
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+        viol |        500           0           0          0          0
+
+. di _n "Identity check: samples in which c - (c' + ab) exceeded 1e-6 (any desi
+> gn): " r(max)
+
+Identity check: samples in which c - (c' + ab) exceeded 1e-6 (any design): 0
+
+. assert r(max) == 0
+
+. collapse (mean) dA iA cA dB iB cB dC iC cC
+
+. foreach v in dA iA cA dB iB cB dC iC cC {
+  2.     scalar m_`v' = `v'[1]
+  3. }
+
+. 
+. * population values
+. scalar biasB = 0.6*0.6/(0.36 + 1)
+
+. scalar pop_iB = 0.5*(0.8 + biasB)
+
+. scalar pop_dB = 0.2 - 0.5*biasB
+
+. scalar lam    = 1/(1 + 1)
+
+. scalar pop_iC = 0.4*lam
+
+. scalar pop_dC = 0.2 + 0.4*(1 - lam)
+
+. 
+. di _n "Monte Carlo means (`R' samples of N = `N'):"
+
+Monte Carlo means (500 samples of N = 2000):
+
+. di    "  Design A: direct " %6.3f m_dA "  indirect " %6.3f m_iA "  total " %6
+> .3f m_cA "   (true 0.200, 0.400, 0.600)"
+  Design A: direct  0.199  indirect  0.400  total  0.599   (true 0.200, 0.400, 
+> 0.600)
+
+. di    "  Design B: direct " %6.3f m_dB "  indirect " %6.3f m_iB "  total " %6
+> .3f m_cB "   (population " %6.3f pop_dB ", " %6.3f pop_iB ", 0.600)"
+  Design B: direct  0.066  indirect  0.533  total  0.599   (population  0.068, 
+>  0.532, 0.600)
+
+. di    "  Design C: direct " %6.3f m_dC "  indirect " %6.3f m_iC "  total " %6
+> .3f m_cC "   (population " %6.3f pop_dC ", " %6.3f pop_iC ", 0.600)"
+  Design C: direct  0.399  indirect  0.200  total  0.599   (population  0.400, 
+>  0.200, 0.600)
+
+. di _n "Checks (Monte Carlo mean minus population value, tolerance 0.01):"
+
+Checks (Monte Carlo mean minus population value, tolerance 0.01):
+
+. di    "  A direct " %8.4f (m_dA - 0.2) "  A indirect " %8.4f (m_iA - 0.4)
+  A direct  -0.0009  A indirect  -0.0003
+
+. di    "  B direct " %8.4f (m_dB - pop_dB) "  B indirect " %8.4f (m_iB - pop_i
+> B)
+  B direct  -0.0015  B indirect   0.0004
+
+. di    "  C direct " %8.4f (m_dC - pop_dC) "  C indirect " %8.4f (m_iC - pop_i
+> C)
+  C direct  -0.0007  C indirect  -0.0005
+
+. di    "  totals   " %8.4f (m_cA - 0.6) " " %8.4f (m_cB - 0.6) " " %8.4f (m_cC
+>  - 0.6)
+  totals    -0.0012  -0.0011  -0.0012
+
+. assert abs(m_dA - 0.2) < 0.01 & abs(m_iA - 0.4) < 0.01
+
+. assert abs(m_dB - pop_dB) < 0.01 & abs(m_iB - pop_iB) < 0.01
+
+. assert abs(m_dC - pop_dC) < 0.01 & abs(m_iC - pop_iC) < 0.01
+
+. assert abs(m_cA - 0.6) < 0.01 & abs(m_cB - 0.6) < 0.01 & abs(m_cC - 0.6) < 0.
+> 01
+
+. 
+. * ---- Figure: stacked bars, direct (maroon) below indirect (navy) ----
+. clear
+
+. set obs 3
+Number of observations (_N) was 0, now 3.
+
+. gen pos = _n
+
+. gen direct = .
+(3 missing values generated)
+
+. gen indirect = .
+(3 missing values generated)
+
+. replace direct = m_dA in 1
+(1 real change made)
+
+. replace direct = m_dB in 2
+(1 real change made)
+
+. replace direct = m_dC in 3
+(1 real change made)
+
+. replace indirect = m_iA in 1
+(1 real change made)
+
+. replace indirect = m_iB in 2
+(1 real change made)
+
+. replace indirect = m_iC in 3
+(1 real change made)
+
+. gen total = direct + indirect
+
+. gen ymid_d = direct/2
+
+. gen ymid_i = direct + indirect/2
+
+. gen lab_d = string(direct, "%4.2f")
+
+. gen lab_i = string(indirect, "%4.2f")
+
+. gen share = string(100*indirect/total, "%2.0f") + " percent mediated"
+
+. 
+. capture mkdir figures
+
+. twoway (bar direct pos, barwidth(0.55) color(maroon))                        
+>             ///
+>        (rbar direct total pos, barwidth(0.55) color(navy))                   
+>             ///
+>        (scatter ymid_d pos, msymbol(none) mlabel(lab_d) mlabposition(0) mlabc
+> olor(white) mlabsize(medium)) ///
+>        (scatter ymid_i pos, msymbol(none) mlabel(lab_i) mlabposition(0) mlabc
+> olor(white) mlabsize(medium)) ///
+>        (scatter total pos, msymbol(none) mlabel(share) mlabposition(12) mlabc
+> olor(gs4) mlabsize(medsmall)), ///
+>     yline(0.6, lcolor(gs8) lpattern(dash))                                   
+>            ///
+>     yline(0.2, lcolor(maroon) lpattern(shortdash))                           
+>            ///
+>     text(0.572 3.32 "total c = 0.60", color(gs4) size(medsmall) placement(e))
+>                  ///
+>     text(0.50 3.32 "indirect ab", color(navy) size(medium) placement(e))     
+>                 ///
+>     text(0.165 3.32 "true direct c' = 0.20", color(maroon) size(medsmall) pla
+> cement(e))      ///
+>     text(0.09 3.32 "direct c'", color(maroon) size(medium) placement(e))     
+>                 ///
+>     xlabel(1 `""A: clean" "design""' 2 `""B: U enters" "both M and Y""' 3 `""
+> C: M measured" "with error""', noticks) ///
+>     xscale(range(0.5 4.0))                                                   
+>            ///
+>     ylabel(0(0.2)0.8, angle(horizontal) format(%3.1f)) yscale(range(0 0.8))  
+>            ///
+>     xtitle("") ytitle("Estimated effect of X on Y")                          
+>            ///
+>     title("The split between paths moves; the total does not")               
+>            ///
+>     subtitle("Monte Carlo means, 500 samples of N = 2,000 (seed 2012); true c
+> ' = 0.20, ab = 0.40, c = 0.60") ///
+>     legend(off) scheme(s1color) xsize(9) ysize(5)
+
+. graph export figures/fig5_mediation_moderation_paths.png, replace width(2000)
+file figures/fig5_mediation_moderation_paths.png written in PNG format
+
+. 
+. capture erase paths_mc.dta
+
+. di "Done: figures/fig5_mediation_moderation_paths.png"
+Done: figures/fig5_mediation_moderation_paths.png
+
+. 
+. 
+. log close
+      name:  <unnamed>
+       log:  /Users/sbb151/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUn
+> iversity/ACCTG 597A/acctg597a-research-design/week06-mediation-moderation/med
+> iation_moderation.log
+  log type:  text
+ closed on:  27 Sep 2026, 15:22:27
+-------------------------------------------------------------------------------
