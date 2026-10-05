@@ -1,0 +1,1132 @@
+-------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/sambonsall/Library/CloudStorage/OneDrive-ThePennsylvaniaSta
+> teUniversity/ACCTG 597A/acctg597a-research-design/week07-fixed-effects/fixed_
+> effects.log
+  log type:  text
+ opened on:   5 Oct 2026, 09:34:15
+
+. capture mkdir figures
+
+. capture mkdir tables
+
+. 
+. * The shared panel, built after each set seed
+. capture program drop fe_panel
+
+. program define fe_panel
+  1.     local N      900
+  2.     local T      5
+  3.     local pconst 0.08
+  4.     local target 0.25
+  5. 
+.     clear
+  6.     set obs `N'
+  7.     gen int firm = _n
+  8.     gen double mu = rnormal(0, 1)
+  9.     gen byte constant = (_n <= round(`pconst' * `N'))
+ 10.     expand `T'
+ 11.     bysort firm: gen int year = _n
+ 12.     gen double lam = 0.25*(year==1) + 0.20*(year==2) + 0.10*(year==3) ///
+>                    - 0.25*(year==4) - 0.30*(year==5)
+ 13.     gen double nu = rnormal(0, 1)
+ 14.     replace nu = 0 if constant
+ 15.     gen double A = mu + lam
+ 16.     replace A = -1.6 if constant
+ 17. 
+.     * Solve SSW(k) = target * SST(k) for the scale k on nu (a quadratic in k)
+.     foreach v in A nu {
+ 18.         bysort firm: egen double `v'_fm = mean(`v')
+ 19.         quietly summarize `v', meanonly
+ 20.         gen double `v'_w = `v' - `v'_fm
+ 21.         gen double `v'_t = `v' - r(mean)
+ 22.     }
+ 23.     foreach p in w t {
+ 24.         gen double aa_`p' = A_`p'^2
+ 25.         gen double an_`p' = A_`p' * nu_`p'
+ 26.         gen double nn_`p' = nu_`p'^2
+ 27.         foreach s in aa an nn {
+ 28.             quietly summarize `s'_`p', meanonly
+ 29.             scalar Z`s'`p' = r(sum)
+ 30.         }
+ 31.     }
+ 32.     * (scalars carry a Z prefix so that no variable name shadows them)
+.     scalar qa = Znnw - `target' * Znnt
+ 33.     scalar qb = 2 * (Zanw - `target' * Zant)
+ 34.     scalar qc = Zaaw - `target' * Zaat
+ 35.     scalar k_scale = (-qb + sqrt(qb^2 - 4*qa*qc)) / (2*qa)
+ 36.     gen double vraw = A + k_scale * nu
+ 37.     drop A_* nu_* aa_* an_* nn_* A
+ 38. 
+.     quietly summarize vraw
+ 39.     gen double vega = (vraw - r(mean)) / r(sd)
+ 40.     label variable vega "CFO vega, standardized by pooled mean and SD"
+ 41. 
+.     * Realized within share (must equal the target)
+.     bysort firm: egen double v_fm = mean(vega)
+ 42.     gen double v_w2 = (vega - v_fm)^2
+ 43.     gen double v_t2 = vega^2
+ 44.     quietly summarize v_w2, meanonly
+ 45.     scalar ssw_v = r(sum)
+ 46.     quietly summarize v_t2, meanonly
+ 47.     scalar sst_v = r(sum)
+ 48.     scalar share_w = ssw_v / sst_v
+ 49.     drop v_fm v_w2 v_t2
+ 50.     di "Panel: `N' firms x `T' years; scale k on nu = " %8.6f k_scale
+ 51.     di "Within-firm share of the sum of squares of vega (target `target'):
+>  " %10.8f share_w
+ 52.     assert abs(share_w - `target') < 1e-8
+ 53.     xtset firm year
+ 54. end
+
+. 
+. 
+. *****************************************************************************
+> ***
+. * MODULE 1: the variation a fixed effects coefficient uses (Mummolo and Peter
+> son)
+. *****************************************************************************
+> ***
+. clear
+
+. set seed 2014
+
+. fe_panel
+Number of observations (_N) was 0, now 900.
+(3,600 observations created)
+(360 real changes made)
+(360 real changes made)
+Panel: 900 firms x 5 years; scale k on nu = 0.666219
+Within-firm share of the sum of squares of vega (target 0.25): 0.25000000
+
+Panel variable: firm (strongly balanced)
+ Time variable: year, 1 to 5
+         Delta: 1 unit
+
+. 
+. * ---- outcome --------------------------------------------------------------
+> --
+. bysort firm (year): gen double a_i = -0.012*mu + rnormal(0, 0.15) if _n == 1
+(3,600 missing values generated)
+
+. bysort firm (year): replace a_i = a_i[1]
+(3600 real changes made)
+
+. gen double uf = 0.158 + a_i + 0.0176*vega + rnormal(0, 0.20)
+
+. label variable uf "Underfunding (fraction of obligations)"
+
+. 
+. * ---- (1) three routes to the firm-and-year slope --------------------------
+> ----
+. quietly regress uf vega i.firm i.year
+
+. scalar b_dum = _b[vega]
+
+. quietly xtreg uf vega i.year, fe vce(cluster firm)
+
+. scalar b_xt  = _b[vega]
+
+. scalar t_xt  = _b[vega] / _se[vega]
+
+. quietly regress vega i.firm i.year
+
+. predict double vt2, residuals              // x~ under firm and year effects
+
+. quietly regress uf vt2
+
+. scalar b_fwl = _b[vt2]
+
+. di _n "Identity checks (should be zero to machine precision):"
+
+Identity checks (should be zero to machine precision):
+
+. di "  (1a) dummies minus xtreg fe        : " %12.10f (b_dum - b_xt)
+  (1a) dummies minus xtreg fe        : -0.0000000000
+
+. di "  (1b) dummies minus FWL residual    : " %12.10f (b_dum - b_fwl)
+  (1b) dummies minus FWL residual    : 0.0000000000
+
+. assert abs(b_dum - b_xt) < 1e-6
+
+. assert abs(b_dum - b_fwl) < 1e-6
+
+. 
+. * ---- (2) one-way within slope as a ratio of within sums (M&P Eq. 2) -------
+> ---
+. bysort firm: egen double v_fm = mean(vega)
+
+. bysort firm: egen double u_fm = mean(uf)
+
+. gen double vw = vega - v_fm                // x~ under firm effects only
+
+. gen double uw = uf - u_fm
+
+. gen double xy = vw*uw
+
+. gen double xx = vw^2
+
+. quietly summarize xy, meanonly
+
+. scalar sxy = r(sum)
+
+. quietly summarize xx, meanonly
+
+. scalar sxx = r(sum)
+
+. quietly xtreg uf vega, fe
+
+. scalar b_fe1 = _b[vega]
+
+. di "  (2)  xtreg fe minus sum(xw*yw)/sum(xw^2): " %12.10f (b_fe1 - sxy/sxx)
+  (2)  xtreg fe minus sum(xw*yw)/sum(xw^2): 0.0000000000
+
+. assert abs(b_fe1 - sxy/sxx) < 1e-6
+
+. 
+. * ---- (3) SST = SSW + SSB --------------------------------------------------
+> ---
+. quietly summarize vega
+
+. scalar sst = r(Var) * (r(N) - 1)
+
+. scalar nobs = r(N)
+
+. gen double bb = (v_fm - r(mean))^2
+
+. quietly summarize bb, meanonly
+
+. scalar ssb = r(sum)
+
+. di "  (3)  SST - SSW - SSB               : " %12.10f (sst - sxx - ssb)
+  (3)  SST - SSW - SSB               : -0.0000000000
+
+. assert abs(sst - sxx - ssb) < 1e-6
+
+. 
+. * ---- (4) firm weights -----------------------------------------------------
+> ---
+. preserve
+
+. collapse (sum) sxy_i = xy sxx_i = xx (max) constant, by(firm)
+
+. gen double b_i = sxy_i / sxx_i               // missing for constant firms
+(72 missing values generated)
+
+. quietly summarize sxx_i if constant, meanonly
+
+. scalar w_const = r(max)
+
+. gen double wb = sxx_i * b_i
+(72 missing values generated)
+
+. quietly summarize wb, meanonly
+
+. scalar num_w = r(sum)
+
+. quietly summarize sxx_i, meanonly
+
+. scalar den_w = r(sum)
+
+. quietly count if constant
+
+. scalar n_const = r(N)
+
+. quietly count
+
+. scalar n_firms = r(N)
+
+. restore
+
+. di "  (4a) b_FE minus sum(w_i b_i)/sum(w_i): " %12.10f (b_fe1 - num_w/den_w)
+  (4a) b_FE minus sum(w_i b_i)/sum(w_i): 0.0000000000
+
+. di "  (4b) largest weight of a constant-vega firm: " %12.10f w_const
+  (4b) largest weight of a constant-vega firm: 0.0000000000
+
+. assert abs(b_fe1 - num_w/den_w) < 1e-6
+
+. assert w_const == 0
+
+. 
+. * ---- (5) standard deviations and described effects ------------------------
+> ---
+. quietly summarize vega
+
+. scalar sd_x  = r(sd)
+
+. quietly summarize vw
+
+. scalar sd_x1 = r(sd)
+
+. quietly summarize vt2
+
+. scalar sd_x2 = r(sd)
+
+. quietly summarize vt2
+
+. scalar ss2 = r(Var) * (r(N) - 1)
+
+. scalar share_2 = ss2 / sst
+
+. di "  (5a) SD(x~1)/SD(x) minus sqrt(SSW/SST): " %12.10f (sd_x1/sd_x - sqrt(sx
+> x/sst))
+  (5a) SD(x~1)/SD(x) minus sqrt(SSW/SST): 0.0000000000
+
+. di "  (5b) SD(x~2)/SD(x) minus sqrt(SS2/SST): " %12.10f (sd_x2/sd_x - sqrt(sh
+> are_2))
+  (5b) SD(x~2)/SD(x) minus sqrt(SS2/SST): 0.0000000000
+
+. * With year effects as well, a constant-vega firm's residual is -(xbar_t - xb
+> ar), not zero:
+. * it stays in the estimation as a comparison firm. Its share of the two-way s
+> um of squares:
+. gen double vt2sq = vt2^2
+
+. quietly summarize vt2sq if constant, meanonly
+
+. scalar ss2_const = r(sum)
+
+. quietly summarize vt2sq, meanonly
+
+. scalar sh2_const = ss2_const / r(sum)
+
+. di "  constant-vega firms' share of the two-way sum of squares: " %8.6f sh2_c
+> onst
+  constant-vega firms' share of the two-way sum of squares: 0.011961
+
+. assert sh2_const > 0      // with year effects, constant firms remain as comp
+> arison firms
+
+. assert abs(sd_x1/sd_x - sqrt(sxx/sst)) < 1e-6
+
+. assert abs(sd_x2/sd_x - sqrt(share_2)) < 1e-6
+
+. 
+. * cross-sectional comparison (year effects only), for contrast
+. quietly regress uf vega i.year, vce(cluster firm)
+
+. scalar b_cs = _b[vega]
+
+. scalar t_cs = _b[vega] / _se[vega]
+
+. 
+. * A&L's 50th-to-95th percentile shift in CFO vega: 1.993 pooled SDs (Table 1)
+. scalar al_shift = (202.77 - 19.87) / 91.77
+
+. scalar shift_in_sd2 = al_shift / (sd_x2 / sd_x)
+
+. 
+. di _n "Numbers for the slides:"
+
+Numbers for the slides:
+
+. quietly summarize uf
+
+. di "  SD of underfunding (A&L Table 1: 0.247): " %6.4f r(sd)
+  SD of underfunding (A&L Table 1: 0.247): 0.2515
+
+. di "  N firm-years                      : " nobs
+  N firm-years                      : 4500
+
+. di "  firms with constant vega          : " n_const " of " n_firms
+  firms with constant vega          : 72 of 900
+
+. di "  within-firm share of SST (one-way): " %6.4f (sxx/sst)
+  within-firm share of SST (one-way): 0.2500
+
+. di "  residual share, firm and year FE  : " %6.4f share_2
+  residual share, firm and year FE  : 0.2175
+
+. di "  SD(x) pooled                      : " %6.4f sd_x
+  SD(x) pooled                      : 1.0000
+
+. di "  SD(x~) firm effects               : " %6.4f sd_x1
+  SD(x~) firm effects               : 0.5000
+
+. di "  SD(x~) firm and year effects      : " %6.4f sd_x2
+  SD(x~) firm and year effects      : 0.4664
+
+. di "  slope, firm and year FE           : " %7.5f b_xt "  (t = " %4.2f t_xt "
+> )"
+  slope, firm and year FE           : 0.01580  (t = 2.47)
+
+. di "  slope, year FE only               : " %7.5f b_cs "  (t = " %4.2f t_cs "
+> )"
+  slope, year FE only               : 0.01403  (t = 2.53)
+
+. di "  slope, firm FE only (one-way)     : " %7.5f b_fe1
+  slope, firm FE only (one-way)     : 0.02048
+
+. di "  A&L Table 4A M3 slope at distress P95 (x 1,000): " %6.2f (22.0 + 2.340*
+> (-1.877))
+  A&L Table 4A M3 slope at distress P95 (x 1,000):  17.61
+
+. di "  described effect, pooled SD       : " %7.5f (b_xt*sd_x)
+  described effect, pooled SD       : 0.01580
+
+. di "  described effect, SD(x~) two-way  : " %7.5f (b_xt*sd_x2)
+  described effect, SD(x~) two-way  : 0.00737
+
+. di "  A&L 50th-95th shift, pooled SDs   : " %6.4f al_shift
+  A&L 50th-95th shift, pooled SDs   : 1.9930
+
+. di "  same shift in two-way SD(x~) units: " %6.4f shift_in_sd2
+  same shift in two-way SD(x~) units: 4.2736
+
+. 
+. 
+. * Figure: the distribution of vega before and after firm and year effects
+. * (the analogue of Mummolo and Peterson's Figure 1, left panel)
+. local s1 : di %4.2f sd_x
+
+. local s2 : di %4.2f sd_x2
+
+. twoway (kdensity vega, lcolor(maroon) lwidth(medthick))                     /
+> //
+>        (kdensity vt2, lcolor(navy) lwidth(thick)),                         //
+> /
+>     text(0.30 2.2 "pooled, SD = `s1'", color(maroon) size(medium) placement(e
+> )) ///
+>     text(0.80 0.9 "after firm and year effects, SD = `s2'", color(navy) size(
+> medium) placement(e)) ///
+>     xtitle("CFO vega, pooled standard deviations") ytitle("Density")       //
+> /
+>     xlabel(-3(1)4) ylabel(, angle(horizontal))                             //
+> /
+>     title("Firm and year effects leave half the spread")                   //
+> /
+>     subtitle("Simulated panel (seed 2014), 900 firms x 5 years")           //
+> /
+>     legend(off) scheme(s1color) xsize(9) ysize(5)
+
+. graph export figures/fig1_within_variation.png, replace width(2000)
+(file figures/fig1_within_variation.png not found)
+file figures/fig1_within_variation.png written in PNG format
+
+. 
+. 
+. *****************************************************************************
+> ***
+. * MODULE 2: which comparison each fixed effects choice draws (Kropko and Kubi
+> nec)
+. *****************************************************************************
+> ***
+. clear
+
+. set seed 2014
+
+. fe_panel
+Number of observations (_N) was 0, now 900.
+(3,600 observations created)
+(360 real changes made)
+(360 real changes made)
+Panel: 900 firms x 5 years; scale k on nu = 0.666219
+Within-firm share of the sum of squares of vega (target 0.25): 0.25000000
+
+Panel variable: firm (strongly balanced)
+ Time variable: year, 1 to 5
+         Delta: 1 unit
+
+. 
+. local theta 0.0183
+
+. local phi   0.03
+
+. local gamma 0.0026
+
+. 
+. * ---- components of vega ---------------------------------------------------
+> -----
+. quietly summarize vega, meanonly
+
+. scalar xbar = r(mean)
+
+. bysort firm: egen double xb_i = mean(vega)
+
+. bysort year: egen double xb_t = mean(vega)
+
+. gen double B  = xb_i - xbar
+
+. gen double Yc = xb_t - xbar
+
+. gen double R  = vega - xb_i - xb_t + xbar
+
+. foreach c in B Yc R {
+  2.     gen double `c'2 = `c'^2
+  3.     quietly summarize `c'2, meanonly
+  4.     scalar SS`c' = r(sum)
+  5. }
+
+. scalar SStot = SSB + SSYc + SSR
+
+. di "Shares of vega's sum of squares: between " %6.4f (SSB/SStot) ///
+>    ", year " %6.4f (SSYc/SStot) ", two-way residual " %6.4f (SSR/SStot)
+Shares of vega's sum of squares: between 0.7500, year 0.0325, two-way residual 
+> 0.2175
+
+. 
+. * ---- outcome --------------------------------------------------------------
+> -----
+. bysort firm (year): gen double a_i = rnormal(0, 0.10) if _n == 1
+(3,600 missing values generated)
+
+. bysort firm (year): replace a_i = a_i[1]
+(3600 real changes made)
+
+. gen double sys = `theta'*B + `phi'*Yc + `gamma'*R        // systematic part
+
+. gen double eq  = 0.603 + a_i + sys + rnormal(0, 0.10)
+
+. label variable eq "Pension equity share"
+
+. 
+. * ---- estimators -----------------------------------------------------------
+> ------
+. program define fe4, rclass
+  1.     * returns pooled, year FE, firm FE, two-way FE slopes of `1' on vega
+.     quietly regress `1' vega
+  2.     return scalar pool = _b[vega]
+  3.     quietly regress `1' vega i.year
+  4.     return scalar yfe = _b[vega]
+  5.     quietly xtreg `1' vega, fe
+  6.     return scalar ffe = _b[vega]
+  7.     quietly xtreg `1' vega i.year, fe
+  8.     return scalar tw = _b[vega]
+  9. end
+
+. fe4 sys
+
+. foreach e in pool yfe ffe tw {
+  2.     scalar S_`e' = r(`e')
+  3. }
+
+. fe4 eq
+
+. foreach e in pool yfe ffe tw {
+  2.     scalar E_`e' = r(`e')
+  3. }
+
+. quietly regress eq vega i.year, vce(cluster firm)
+
+. scalar t_yfe = _b[vega] / _se[vega]
+
+. quietly xtreg eq vega i.year, fe vce(cluster firm)
+
+. scalar t_tw = _b[vega] / _se[vega]
+
+. 
+. di _n "Identity checks (should be zero to machine precision):"
+
+Identity checks (should be zero to machine precision):
+
+. * (4) systematic part: each estimator = SS-weighted average of kept slopes
+. scalar L_pool = (`theta'*SSB + `phi'*SSYc + `gamma'*SSR) / SStot
+
+. scalar L_yfe  = (`theta'*SSB + `gamma'*SSR) / (SSB + SSR)
+
+. scalar L_ffe  = (`phi'*SSYc + `gamma'*SSR) / (SSYc + SSR)
+
+. scalar L_tw   = `gamma'
+
+. foreach e in pool yfe ffe tw {
+  2.     di "  (4) `e' on systematic part minus weighted average of kept slopes
+> : " %12.10f (S_`e' - L_`e')
+  3.     assert abs(S_`e' - L_`e') < 1e-6
+  4. }
+  (4) pool on systematic part minus weighted average of kept slopes: 0.00000000
+> 00
+  (4) yfe on systematic part minus weighted average of kept slopes: 0.000000000
+> 0
+  (4) ffe on systematic part minus weighted average of kept slopes: 0.000000000
+> 0
+  (4) tw on systematic part minus weighted average of kept slopes: 0.0000000000
+
+. 
+. * ---- (1) firm FE as a weighted average of firm slopes (K&K Eqs 9-11) ------
+> --------
+. bysort firm: egen double y_i = mean(eq)
+
+. gen double xw = vega - xb_i
+
+. gen double yw = eq - y_i
+
+. gen double xwyw = xw*yw
+
+. gen double xw2  = xw^2
+
+. * ---- (2) year FE as a weighted average of year slopes (K&K Eq 8) ----------
+> --------
+. bysort year: egen double y_t = mean(eq)
+
+. gen double xy_ = vega - xb_t
+
+. gen double yy_ = eq - y_t
+
+. gen double xyyy = xy_*yy_
+
+. gen double xy2  = xy_^2
+
+. * ---- (3) two-way: Eq 12 and Eq 13 -----------------------------------------
+> ----------
+. quietly summarize eq, meanonly
+
+. scalar ybar = r(mean)
+
+. gen double ytw = eq - y_i - y_t + ybar
+
+. gen double Rytw = R*ytw
+
+. preserve
+
+.     collapse (sum) n1 = xwyw d1 = xw2, by(firm)
+
+.     gen double b_i = n1/d1
+(72 missing values generated)
+
+.     gen double wb = d1*b_i
+(72 missing values generated)
+
+.     quietly summarize wb, meanonly
+
+.     scalar num1 = r(sum)
+
+.     quietly summarize d1, meanonly
+
+.     scalar den1 = r(sum)
+
+. restore
+
+. preserve
+
+.     collapse (sum) n2 = xyyy d2 = xy2, by(year)
+
+.     gen double b_t = n2/d2
+
+.     gen double wb = d2*b_t
+
+.     quietly summarize wb, meanonly
+
+.     scalar num2 = r(sum)
+
+.     quietly summarize d2, meanonly
+
+.     scalar den2 = r(sum)
+
+. restore
+
+. quietly summarize Rytw, meanonly
+
+. scalar n12 = r(sum)
+
+. * Eq 13: within each year, regress firm-demeaned y on firm-demeaned x
+. gen double ys = eq - y_i
+
+. bysort year: egen double ys_t = mean(ys)
+
+. bysort year: egen double xs_t = mean(xw)
+
+. gen double xs_c = xw - xs_t
+
+. gen double ys_c = ys - ys_t
+
+. gen double n13 = xs_c*ys_c
+
+. gen double d13 = xs_c^2
+
+. preserve
+
+.     collapse (sum) n13 d13, by(year)
+
+.     gen double b13 = n13/d13
+
+.     gen double wb = d13*b13
+
+.     quietly summarize wb, meanonly
+
+.     scalar num13 = r(sum)
+
+.     quietly summarize d13, meanonly
+
+.     scalar den13 = r(sum)
+
+. restore
+
+. di "  (1) firm FE minus sum(w_i b_i)/sum(w_i)      : " %12.10f (E_ffe - num1/
+> den1)
+  (1) firm FE minus sum(w_i b_i)/sum(w_i)      : -0.0000000000
+
+. di "  (2) year FE minus sum(w_t b_t)/sum(w_t)      : " %12.10f (E_yfe - num2/
+> den2)
+  (2) year FE minus sum(w_t b_t)/sum(w_t)      : 0.0000000000
+
+. di "  (3a) two-way FE minus K&K Eq 12 ratio         : " %12.10f (E_tw - n12/S
+> SR)
+  (3a) two-way FE minus K&K Eq 12 ratio         : 0.0000000000
+
+. di "  (3b) two-way FE minus K&K Eq 13 average       : " %12.10f (E_tw - num13
+> /den13)
+  (3b) two-way FE minus K&K Eq 13 average       : -0.0000000000
+
+. assert abs(E_ffe - num1/den1) < 1e-6
+
+. assert abs(E_yfe - num2/den2) < 1e-6
+
+. assert abs(E_tw - n12/SSR) < 1e-6
+
+. assert abs(E_tw - num13/den13) < 1e-6
+
+. 
+. * ---- (5) the gap between firm FE and two-way FE (appendix B1) -------------
+> -----------
+. quietly regress eq vega i.firm i.year
+
+. gen double d_hat = 0
+
+. forvalues t = 2/5 {
+  2.     quietly replace d_hat = _b[`t'.year] if year == `t'
+  3. }
+
+. gen double gap_term = d_hat*Yc
+
+. quietly summarize gap_term, meanonly
+
+. scalar gap_rhs = r(sum) / (SSYc + SSR)
+
+. di "  (5) (firm FE - two-way FE) minus N sum d_t (xbar_t - xbar)/SSW: " %12.1
+> 0f ((E_ffe - E_tw) - gap_rhs)
+  (5) (firm FE - two-way FE) minus N sum d_t (xbar_t - xbar)/SSW: -0.0000000000
+
+. assert abs((E_ffe - E_tw) - gap_rhs) < 1e-6
+
+. 
+. di _n "Numbers for the slides (x 1,000, as A&L report them):"
+
+Numbers for the slides (x 1,000, as A&L report them):
+
+. di "  shares: between " %6.4f (SSB/SStot) "  year " %6.4f (SSYc/SStot) "  res
+> idual " %6.4f (SSR/SStot)
+  shares: between 0.7500  year 0.0325  residual 0.2175
+
+. di "  systematic part: pooled " %6.2f (1000*S_pool) "  year FE " %6.2f (1000*
+> S_yfe) ///
+>    "  firm FE " %6.2f (1000*S_ffe) "  two-way " %6.2f (1000*S_tw)
+  systematic part: pooled  15.27  year FE  14.77  firm FE   6.16  two-way   2.6
+> 0
+
+. di "  simulated eq   : pooled " %6.2f (1000*E_pool) "  year FE " %6.2f (1000*
+> E_yfe) ///
+>    "  firm FE " %6.2f (1000*E_ffe) "  two-way " %6.2f (1000*E_tw)
+  simulated eq   : pooled  19.77  year FE  18.85  firm FE   7.60  two-way   1.7
+> 0
+
+. di "  t (clustered by firm): year FE " %5.2f t_yfe "  two-way " %5.2f t_tw
+  t (clustered by firm): year FE  5.51  two-way  0.53
+
+. quietly summarize eq
+
+. di "  SD of equity share (A&L Table 1: 0.152): " %6.4f r(sd)
+  SD of equity share (A&L Table 1: 0.152): 0.1435
+
+. di "  A&L Model 3 slopes at distress P95 (x 1,000): Table 5 " %6.2f (18.6 + 2
+> .050*(-1.877)) "  Table 6A " %6.2f (4.510 + 1.010*(-1.877))
+  A&L Model 3 slopes at distress P95 (x 1,000): Table 5  14.75  Table 6A   2.61
+
+. 
+. 
+. * Table: the four fixed effects choices
+. file open tab using tables/tab_fe_slices.tex, write replace
+(file tables/tab_fe_slices.tex not found)
+
+. file write tab "\begin{tabular}{@{}lccc@{}}" _n
+
+. file write tab "\toprule" _n
+
+. file write tab "Fixed effects & Kept parts of vega & Slope, systematic part &
+>  Estimate \\" _n
+
+. file write tab "\midrule" _n
+
+. foreach e in pool yfe ffe tw {
+  2.     local lab = cond("`e'"=="pool","None",cond("`e'"=="yfe","Year",cond("`
+> e'"=="ffe","Firm","Firm and year")))
+  3.     local kept = cond("`e'"=="pool","all",cond("`e'"=="yfe","between, resi
+> dual",cond("`e'"=="ffe","year, residual","residual")))
+  4.     local a : di %4.1f (1000*S_`e')
+  5.     local b : di %4.1f (1000*E_`e')
+  6.     file write tab "`lab' & `kept' & `=strtrim("`a'")' & `=strtrim("`b'")'
+>  \\" _n
+  7. }
+
+. file write tab "\bottomrule" _n
+
+. file write tab "\end{tabular}" _n
+
+. file close tab
+
+. type tables/tab_fe_slices.tex
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Fixed effects & Kept parts of vega & Slope, systematic part & Estimate \\
+\midrule
+None & all & 15.3 & 19.8 \\
+Year & between, residual & 14.8 & 18.9 \\
+Firm & year, residual & 6.2 & 7.6 \\
+Firm and year & residual & 2.6 & 1.7 \\
+\bottomrule
+\end{tabular}
+
+. 
+. 
+. *****************************************************************************
+> ***
+. * MODULE 3: the two-way slope as the residual part of vega shrinks
+. *****************************************************************************
+> ***
+. * ---- Monte Carlo: the two-way slope as the residual component shrinks -----
+> -------
+. mata:
+------------------------------------------------- mata (type end to exit) -----
+: void mc_twfe(real scalar N, real scalar T, real scalar R, real rowvector cs,
+>              real scalar gam, real scalar se)
+> {
+>     real scalar j, r, c, ss, b
+>     real matrix X, Y, Xt, Yt, out
+>     real colvector mu, a
+>     real rowvector lam, bs, an, sh
+>     lam = (0.25, 0.20, 0.10, -0.25, -0.30)
+>     out = J(cols(cs), 5, .)
+>     for (j = 1; j <= cols(cs); j++) {
+>         c = cs[j]
+>         bs = J(1, R, .); an = J(1, R, .); sh = J(1, R, .)
+>         for (r = 1; r <= R; r++) {
+>             mu = rnormal(N, 1, 0, 1)
+>             a  = rnormal(N, 1, 0, 0.10)
+>             X  = (mu :+ c :* rnormal(N, T, 0, 1)) :+ lam   // column first, t
+> hen row (Mata colon rules)
+>             X  = (X :- mean(vec(X))) :/ sqrt(variance(vec(X)))
+>             Y  = a :+ gam :* X :+ rnormal(N, T, 0, se)
+>             Xt = X :- rowsum(X)/T :- colsum(X)/N :+ sum(X)/(N*T)
+>             Yt = Y :- rowsum(Y)/T :- colsum(Y)/N :+ sum(Y)/(N*T)
+>             ss = sum(Xt:^2)
+>             bs[r] = sum(Xt:*Yt)/ss
+>             an[r] = se/sqrt(ss)
+>             sh[r] = ss/((N*T) - 1)
+>         }
+>         out[j, .] = (c, mean(sh'), mean(bs'), sqrt(variance(bs')), mean(an'))
+>     }
+>     st_matrix("MC", out)
+> }
+note: variable b unused.
+
+: end
+-------------------------------------------------------------------------------
+
+. mata: mc_twfe(900, 5, 500, (0.70, 0.35, 0.18, 0.09, 0.045, 0.022, 0.011, 0.00
+> 55), `gamma', 0.10)
+
+. matrix colnames MC = scale share mean_b sd_b analytic
+
+. matrix list MC, format(%9.5f)
+
+MC[8,5]
+       scale     share    mean_b      sd_b  analytic
+r1   0.70000   0.25438   0.00264   0.00279   0.00296
+r2   0.35000   0.08382   0.00296   0.00498   0.00515
+r3   0.18000   0.02394   0.00311   0.01002   0.00964
+r4   0.09000   0.00613   0.00159   0.01858   0.01906
+r5   0.04500   0.00153   0.00234   0.03963   0.03811
+r6   0.02200   0.00037   0.00623   0.07903   0.07794
+r7   0.01100   0.00009   0.00814   0.15783   0.15553
+r8   0.00550   0.00002   0.02093   0.31443   0.31126
+
+. di _n "Monte Carlo check: simulated SD of the two-way slope versus sigma_e/sq
+> rt(sum R^2)"
+
+Monte Carlo check: simulated SD of the two-way slope versus sigma_e/sqrt(sum R^
+> 2)
+
+. forvalues j = 1/`=rowsof(MC)' {
+  2.     scalar ratio = MC[`j', 4] / MC[`j', 5]
+  3.     di "  residual share " %7.5f MC[`j', 2] ": SD " %8.5f MC[`j', 4] "  an
+> alytic " %8.5f MC[`j', 5] "  ratio " %5.3f ratio
+  4.     assert abs(ratio - 1) < 0.10
+  5. }
+  residual share 0.25438: SD  0.00279  analytic  0.00296  ratio 0.942
+  residual share 0.08382: SD  0.00498  analytic  0.00515  ratio 0.966
+  residual share 0.02394: SD  0.01002  analytic  0.00964  ratio 1.039
+  residual share 0.00613: SD  0.01858  analytic  0.01906  ratio 0.975
+  residual share 0.00153: SD  0.03963  analytic  0.03811  ratio 1.040
+  residual share 0.00037: SD  0.07903  analytic  0.07794  ratio 1.014
+  residual share 0.00009: SD  0.15783  analytic  0.15553  ratio 1.015
+  residual share 0.00002: SD  0.31443  analytic  0.31126  ratio 1.010
+
+. 
+. 
+. * Figure: sampling SD of the two-way slope against the residual share
+. clear
+
+. svmat MC, names(col)
+number of observations will be reset to 8
+Press any key to continue, or Break to abort
+Number of observations (_N) was 0, now 8.
+
+. gen sd1000 = 1000*sd_b
+
+. gen an1000 = 1000*analytic
+
+. twoway (line an1000 share, lcolor(gs8))                                    //
+> /
+>        (scatter sd1000 share, mcolor(navy) msymbol(circle) msize(large)), ///
+>     xscale(log reverse) yscale(log)                                        //
+> /
+>     xlabel(0.1 "10%" 0.01 "1%" 0.001 "0.1%" 0.0001 "0.01%")                //
+> /
+>     ylabel(3 10 30 100 300, angle(horizontal))                             //
+> /
+>     yline(`=1000*`gamma'', lcolor(maroon) lpattern(dash))                  //
+> /
+>     xtitle("Share of vega's variance that is neither firm nor year")       //
+> /
+>     ytitle("SD of the two-way slope (x 1,000)")                            //
+> /
+>     title("Less residual variation, a noisier two-way slope")              //
+> /
+>     subtitle("500 draws per point; dashed line: the true slope")           //
+> /
+>     legend(off) scheme(s1color) xsize(9) ysize(5)
+
+. graph export figures/fig2_twoway_precision.png, replace width(2000)
+(file figures/fig2_twoway_precision.png not found)
+file figures/fig2_twoway_precision.png written in PNG format
+
+. 
+. 
+. *****************************************************************************
+> ***
+. * MODULE 4: K&K's homogeneous design, where the two-way slope is not identifi
+> ed
+. *****************************************************************************
+> ***
+. * ---- K&K's DGP with homogeneous slopes (Eqs 20-21): not identified --------
+> -----------
+. preserve
+
+.     clear
+
+.     set obs 30
+Number of observations (_N) was 0, now 30.
+
+.     gen int case = _n
+
+.     gen double alpha_i = rnormal()
+
+.     expand 30
+(870 observations created)
+
+.     bysort case: gen int time = _n
+
+.     gen double alpha_t = rnormal() if case == 1
+(870 missing values generated)
+
+.     bysort time (case): replace alpha_t = alpha_t[1]
+(870 real changes made)
+
+.     local bta 1
+
+.     local gma -3
+
+.     gen double x = (alpha_i - alpha_t) / (`bta' - `gma')
+
+.     gen double y = (`bta'*alpha_i - `gma'*alpha_t) / (`bta' - `gma')   // noi
+> se-free, as in K&K Eq 21
+
+.     regress y x i.case i.time
+note: 30.time omitted because of collinearity.
+
+      Source |       SS           df       MS      Number of obs   =       900
+-------------+----------------------------------   F(58, 841)      =         .
+       Model |  662.332442        58  11.4195249   Prob > F        =         .
+    Residual |           0       841           0   R-squared       =    1.0000
+-------------+----------------------------------   Adj R-squared   =    1.0000
+       Total |  662.332442       899  .736743539   Root MSE        =         0
+
+------------------------------------------------------------------------------
+           y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           x |         -3          .        .       .            .           .
+             |
+        case |
+          2  |    2.39266          .        .       .            .           .
+          3  |   .3804681          .        .       .            .           .
+          4  |   1.421452          .        .       .            .           .
+          5  |   1.634188          .        .       .            .           .
+          6  |  -.7016416          .        .       .            .           .
+          7  |   .1966308          .        .       .            .           .
+          8  |   2.017535          .        .       .            .           .
+          9  |   .9401856          .        .       .            .           .
+         10  |     1.2301          .        .       .            .           .
+         11  |   1.567082          .        .       .            .           .
+         12  |   1.193603          .        .       .            .           .
+         13  |  -.9621038          .        .       .            .           .
+         14  |   .2729403          .        .       .            .           .
+         15  |   .7471869          .        .       .            .           .
+         16  |  -.9036424          .        .       .            .           .
+         17  |  -.3252432          .        .       .            .           .
+         18  |  -1.279702          .        .       .            .           .
+         19  |   1.716189          .        .       .            .           .
+         20  |   2.539426          .        .       .            .           .
+         21  |   .6824447          .        .       .            .           .
+         22  |   1.451204          .        .       .            .           .
+         23  |   .3150554          .        .       .            .           .
+         24  |   .9625541          .        .       .            .           .
+         25  |   1.332513          .        .       .            .           .
+         26  |    .430959          .        .       .            .           .
+         27  |   1.300861          .        .       .            .           .
+         28  |   .1948472          .        .       .            .           .
+         29  |  -.0548535          .        .       .            .           .
+         30  |  -.3177659          .        .       .            .           .
+             |
+        time |
+          2  |  -3.00e-14          .        .       .            .           .
+          3  |  -3.68e-14          .        .       .            .           .
+          4  |   9.32e-14          .        .       .            .           .
+          5  |  -4.23e-14          .        .       .            .           .
+          6  |   1.86e-14          .        .       .            .           .
+          7  |  -3.12e-15          .        .       .            .           .
+          8  |   6.57e-15          .        .       .            .           .
+          9  |   6.13e-14          .        .       .            .           .
+         10  |  -5.48e-15          .        .       .            .           .
+         11  |   3.22e-14          .        .       .            .           .
+         12  |   1.45e-14          .        .       .            .           .
+         13  |   2.75e-14          .        .       .            .           .
+         14  |   1.10e-13          .        .       .            .           .
+         15  |   1.19e-13          .        .       .            .           .
+         16  |  -5.36e-15          .        .       .            .           .
+         17  |   5.84e-14          .        .       .            .           .
+         18  |  -1.24e-13          .        .       .            .           .
+         19  |   1.57e-13          .        .       .            .           .
+         20  |  -8.93e-14          .        .       .            .           .
+         21  |  -1.61e-14          .        .       .            .           .
+         22  |   3.10e-14          .        .       .            .           .
+         23  |  -1.04e-14          .        .       .            .           .
+         24  |  -1.14e-14          .        .       .            .           .
+         25  |   2.71e-14          .        .       .            .           .
+         26  |  -1.25e-13          .        .       .            .           .
+         27  |  -5.08e-14          .        .       .            .           .
+         28  |  -7.00e-14          .        .       .            .           .
+         29  |   5.56e-14          .        .       .            .           .
+         30  |          0  (omitted)
+             |
+       _cons |  -1.038527          .        .       .            .           .
+------------------------------------------------------------------------------
+
+.     scalar kk_b1 = _b[x]
+
+.     regress y x i.time i.case
+note: 30.case omitted because of collinearity.
+
+      Source |       SS           df       MS      Number of obs   =       900
+-------------+----------------------------------   F(58, 841)      =         .
+       Model |  662.332442        58  11.4195249   Prob > F        =         .
+    Residual |           0       841           0   R-squared       =    1.0000
+-------------+----------------------------------   Adj R-squared   =    1.0000
+       Total |  662.332442       899  .736743539   Root MSE        =         0
+
+------------------------------------------------------------------------------
+           y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+           x |          1          .        .       .            .           .
+             |
+        time |
+          2  |   .8570393          .        .       .            .           .
+          3  |   .9808211          .        .       .            .           .
+          4  |  -1.226344          .        .       .            .           .
+          5  |   1.070891          .        .       .            .           .
+          6  |   .0347085          .        .       .            .           .
+          7  |   .4033344          .        .       .            .           .
+          8  |    .238814          .        .       .            .           .
+          9  |  -.6978023          .        .       .            .           .
+         10  |   .4444147          .        .       .            .           .
+         11  |  -.1983259          .        .       .            .           .
+         12  |   .1039052          .        .       .            .           .
+         13  |  -.1199907          .        .       .            .           .
+         14  |  -1.516918          .        .       .            .           .
+         15  |   -1.68463          .        .       .            .           .
+         16  |   .4393624          .        .       .            .           .
+         17  |  -.6443841          .        .       .            .           .
+         18  |   2.469343          .        .       .            .           .
+         19  |  -2.328834          .        .       .            .           .
+         20  |   1.867766          .        .       .            .           .
+         21  |   .6234045          .        .       .            .           .
+         22  |  -.1744953          .        .       .            .           .
+         23  |   .5267576          .        .       .            .           .
+         24  |   .5450465          .        .       .            .           .
+         25  |  -.1108979          .        .       .            .           .
+         26  |   2.466772          .        .       .            .           .
+         27  |   1.208997          .        .       .            .           .
+         28  |   1.536262          .        .       .            .           .
+         29  |  -.5913586          .        .       .            .           .
+         30  |   .6943184          .        .       .            .           .
+             |
+        case |
+          2  |   2.36e-13          .        .       .            .           .
+          3  |   4.98e-14          .        .       .            .           .
+          4  |   1.46e-13          .        .       .            .           .
+          5  |   1.66e-13          .        .       .            .           .
+          6  |  -5.02e-14          .        .       .            .           .
+          7  |   3.29e-14          .        .       .            .           .
+          8  |   2.01e-13          .        .       .            .           .
+          9  |   1.02e-13          .        .       .            .           .
+         10  |   1.28e-13          .        .       .            .           .
+         11  |   1.60e-13          .        .       .            .           .
+         12  |   1.25e-13          .        .       .            .           .
+         13  |  -7.44e-14          .        .       .            .           .
+         14  |   3.99e-14          .        .       .            .           .
+         15  |   8.38e-14          .        .       .            .           .
+         16  |  -6.89e-14          .        .       .            .           .
+         17  |  -1.54e-14          .        .       .            .           .
+         18  |  -1.04e-13          .        .       .            .           .
+         19  |   1.73e-13          .        .       .            .           .
+         20  |   2.50e-13          .        .       .            .           .
+         21  |   7.78e-14          .        .       .            .           .
+         22  |   1.49e-13          .        .       .            .           .
+         23  |   4.39e-14          .        .       .            .           .
+         24  |   1.04e-13          .        .       .            .           .
+         25  |   1.38e-13          .        .       .            .           .
+         26  |   5.46e-14          .        .       .            .           .
+         27  |   1.35e-13          .        .       .            .           .
+         28  |   3.27e-14          .        .       .            .           .
+         29  |   9.60e-15          .        .       .            .           .
+         30  |          0  (omitted)
+             |
+       _cons |  -.0097055          .        .       .            .           .
+------------------------------------------------------------------------------
+
+.     scalar kk_b2 = _b[x]
+
+.     di "  K&K homogeneous DGP (beta_t = `bta', gamma_i = `gma'):"
+  K&K homogeneous DGP (beta_t = 1, gamma_i = -3):
+
+.     di "    order x i.case i.time -> b = " %8.4f kk_b1
+    order x i.case i.time -> b =  -3.0000
+
+.     di "    order x i.time i.case -> b = " %8.4f kk_b2
+    order x i.time i.case -> b =   1.0000
+
+. restore
+
+. 
+. 
+. di _n "Done: fixed_effects.do"
+
+Done: fixed_effects.do
+
+. log close
+      name:  <unnamed>
+       log:  /Users/sambonsall/Library/CloudStorage/OneDrive-ThePennsylvaniaSta
+> teUniversity/ACCTG 597A/acctg597a-research-design/week07-fixed-effects/fixed_
+> effects.log
+  log type:  text
+ closed on:   5 Oct 2026, 09:34:22
+-------------------------------------------------------------------------------
