@@ -48,6 +48,7 @@ Slides for the in-class research-design modules are posted under `decks/` as PDF
 | 6 | [`decks/week06/week6_mediation_moderation.pdf`](decks/week06/week6_mediation_moderation.pdf) | Direct, Indirect, and Conditional Effects (Bhattacharya, Ecker, Olsson, and Schipper 2012) |
 | 7 | [`decks/week07/week7_mummolo_peterson.pdf`](decks/week07/week7_mummolo_peterson.pdf) | Within-Firm Variation and Economic Magnitude (Mummolo and Peterson 2018) |
 | 7 | [`decks/week07/week7_kropko_kubinec.pdf`](decks/week07/week7_kropko_kubinec.pdf) | Which Comparison a Fixed Effect Draws (Kropko and Kubinec 2020) |
+| 8 | [`decks/week08/week8_glr_causal_inference.pdf`](decks/week08/week8_glr_causal_inference.pdf) | Controls and Designs as Causal Claims (Gow, Larcker, and Reiss 2016) |
 | 10 | [`decks/week10/week10_breuer_bartik.pdf`](decks/week10/week10_breuer_bartik.pdf) | A Shift-Share Measure of Regulatory Scope (Breuer, Leuz, and Vanhaverbeke 2025) |
 
 ## Running the code
