@@ -1,0 +1,11 @@
+\begin{tabular}{@{}llcc@{}}
+\toprule
+Role of $z$ & Arrows & $y$ on $x$ & $y$ on $x$ and $z$ \\
+\midrule
+Confounder & $z \rightarrow x$, $z \rightarrow y$ & \textcolor{Maroon}{\bfseries 0.60 (47.5)} & \textcolor{DeepNavy}{\bfseries 0.31 (21.9)} \\
+Mediator & $x \rightarrow z \rightarrow y$ & \textcolor{DeepNavy}{\bfseries 0.31 (25.9)} & 0.12 (8.7) \\
+Collider & $x \rightarrow z \leftarrow y$ & \textcolor{DeepNavy}{\bfseries 0.31 (28.2)} & \textcolor{Maroon}{\bfseries -0.18 (-14.1)} \\
+\midrule
+\multicolumn{4}{@{}l}{Causal effect of $x$ on $y$: 0.30 in every design (direct effect 0.10 in the mediator design). Seed 2016, $N$ = 5,000.} \\
+\bottomrule
+\end{tabular}
